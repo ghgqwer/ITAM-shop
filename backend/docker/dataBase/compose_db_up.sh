@@ -1,0 +1,1 @@
+docker compose -f ./docker/dataBase/dataBase.yaml up 
