@@ -1,8 +1,7 @@
 package server
 
 import (
-	"ITAM-shop/backend/internal/database"
-	"database/sql"
+	"backend/internal/database"
 	"encoding/json"
 	"io"
 	"log"
@@ -12,12 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	PhotoLink = "../images/temp_image_1864F5A8-BB50-48B2-9D6A-39291A775AB2.WEBP"
+)
+
 type Server struct {
 	host string
-	db   *sql.DB
+	db   *database.DataBase
 }
 
-func New(host string, db *sql.DB) *Server {
+func New(host string, db *database.DataBase) *Server {
 	s := &Server{
 		host: host,
 		db:   db,
@@ -43,12 +46,12 @@ func (r *Server) newApi() *gin.Engine {
 
 func (r *Server) handlerGetProduct(ctx *gin.Context) {
 	ID := ctx.Param("ID")
-	res, err := database.GetProduct(r.db, ID)
+	res, err := r.db.GetProduct(ID)
 	if err != nil {
-		ctx.AbortWithStatus(400)
+		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	ctx.JSON(200, res)
+	ctx.JSON(http.StatusOK, res)
 }
 
 type Product struct {
@@ -67,7 +70,7 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 		return
 	}
 
-	file, err := os.Open("../images/temp_image_1864F5A8-BB50-48B2-9D6A-39291A775AB2.WEBP")
+	file, err := os.Open(PhotoLink)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,13 +81,39 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 		log.Fatal(err)
 	}
 
-	if err := database.AddProduct(r.db, product, binaryData); err != nil {
-		ctx.JSON(500, gin.H{"error": err.Error()})
+	tx, err := r.db.DB.Begin()
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
+
+	if err = r.db.AddProduct(product, binaryData); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
 	ctx.Status(http.StatusOK)
 }
+
+// 	if err := r.db.AddProduct(product, binaryData); err != nil {
+// 		ctx.JSON(500, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	ctx.Status(http.StatusOK)
+// }
 
 func (r *Server) handlerPutProduct(ctx *gin.Context) {
 	ID := ctx.Param("ID")
@@ -95,7 +124,7 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 		return
 	}
 
-	file, err := os.Open("../images/temp_image_1864F5A8-BB50-48B2-9D6A-39291A775AB2.WEBP")
+	file, err := os.Open(PhotoLink)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -106,24 +135,63 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 		log.Fatal(err)
 	}
 
-	if err := database.UpdateProduct(r.db, product, ID, binaryData); err != nil {
+	tx, err := r.db.DB.Begin()
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
+
+	if err = r.db.UpdateProduct(product, ID, binaryData); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	if err = tx.Commit(); err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
 	ctx.Status(http.StatusOK)
 }
 
 func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
 	ID := ctx.Param("ID")
-	if err := database.DeleteProduct(r.db, ID); err != nil {
+
+	tx, err := r.db.DB.Begin()
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
+
+	if err := r.db.DeleteProduct(ID); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	if err = tx.Commit(); err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
 	ctx.Status(http.StatusOK)
 }
 
 func (r *Server) handlerGetGoods(ctx *gin.Context) {
-	res, err := database.GetAllGoods(r.db)
+	res, err := r.db.GetAllGoods()
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return

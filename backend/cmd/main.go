@@ -1,8 +1,8 @@
 package main
 
 import (
-	"ITAM-shop/backend/internal/database"
-	"ITAM-shop/backend/server"
+	"backend/internal/database"
+	"backend/server"
 
 	_ "github.com/lib/pq"
 )
@@ -10,8 +10,8 @@ import (
 func main() {
 
 	postgresURL := "postgresql://username:password@localhost:5432/core?sslmode=disable"
-	db := database.StartDataBase(postgresURL)
-	defer db.Close()
+	db := database.NewDataBase(postgresURL)
+	defer db.CloseDataBase()
 
 	serv := server.New(":8080", db)
 	serv.StartServer()

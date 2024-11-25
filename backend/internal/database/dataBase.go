@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -45,7 +46,11 @@ const (
 	GetGoods = `SELECT * FROM goods`
 )
 
-func StartDataBase(postgresURL string) *sql.DB {
+type DataBase struct {
+	DB *sql.DB
+}
+
+func NewDataBase(postgresURL string) *DataBase {
 	db, err := sql.Open("postgres", postgresURL)
 	if err != nil {
 		log.Fatalf("Open: %v", err)
@@ -58,52 +63,52 @@ func StartDataBase(postgresURL string) *sql.DB {
 	if _, err = db.Exec(CreateDB); err != nil {
 		log.Fatalf("failed to create table: %v", err)
 	}
-	return db
+	return &DataBase{DB: db}
 }
 
-func AddProduct(db *sql.DB, product Product, photo []byte) error {
-	_, err := db.Exec(Add, product.Name, product.Description, product.Count, product.Price,
+func (d *DataBase) AddProduct(product Product, photo []byte) error {
+	_, err := d.DB.Exec(Add, product.Name, product.Description, product.Count, product.Price,
 		product.IsUnique, product.Category, photo)
 	if err != nil {
 		log.Printf("Error adding product: %v", err)
-		return errors.New("failed to add product")
+		return fmt.Errorf("failed to add product: %w", err)
 	}
 	return nil
 }
 
-func DeleteProduct(db *sql.DB, id string) error {
-	if _, err := db.Exec(Delete, id); err != nil {
-		return errors.New("Product doesnt delete")
+func (d *DataBase) DeleteProduct(id string) error {
+	if _, err := d.DB.Exec(Delete, id); err != nil {
+		return fmt.Errorf("Product doesnt delete: %w", err)
 	}
 	return nil
 }
 
-func UpdateProduct(db *sql.DB, product Product, ID string, photo []byte) error {
-	if _, err := db.Exec(Udpate, product.Name, product.Description, product.Count, product.Price,
+func (d *DataBase) UpdateProduct(product Product, ID string, photo []byte) error {
+	if _, err := d.DB.Exec(Udpate, product.Name, product.Description, product.Count, product.Price,
 		product.IsUnique, product.Category, photo, ID); err != nil {
 		return errors.New("Product doesnt update")
 	}
 	return nil
 }
 
-func GetProduct(db *sql.DB, id string) (Product, error) {
+func (d *DataBase) GetProduct(id string) (Product, error) {
 	var product Product
-	err := db.QueryRow(Get, id).Scan(&product.ID, &product.Name,
+	err := d.DB.QueryRow(Get, id).Scan(&product.ID, &product.Name,
 		&product.Description, &product.Count, &product.Price,
 		&product.IsUnique, &product.Category, &product.Photo)
 	if err != nil {
-		return product, errors.New("Product doesnt get")
+		return product, fmt.Errorf("Product doesnt get %w", err)
 	}
 	return product, nil
 }
 
-func GetAllGoods(db *sql.DB) ([]Product, error) {
+func (d *DataBase) GetAllGoods() ([]Product, error) {
 	var products []Product
 
-	rows, err := db.Query(GetGoods)
+	rows, err := d.DB.Query(GetGoods)
 	if err != nil {
 		log.Printf("Error fetching goods: %v", err)
-		return nil, errors.New("failed to fetch goods")
+		return nil, fmt.Errorf("failed to fetch goods: %w", err)
 	}
 	defer rows.Close()
 
@@ -114,9 +119,15 @@ func GetAllGoods(db *sql.DB) ([]Product, error) {
 			&product.Category, &product.Photo)
 		if err != nil {
 			log.Printf("Error scanning product: %v", err)
-			return nil, errors.New("failed to scan product")
+			return nil, fmt.Errorf("failed to scan product: %w", err)
 		}
 		products = append(products, product)
 	}
 	return products, nil
+}
+
+func (d *DataBase) CloseDataBase() {
+	if err := d.DB.Close(); err != nil {
+		log.Printf("Error closing database: %w", err)
+	}
 }
