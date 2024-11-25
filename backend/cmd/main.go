@@ -10,9 +10,11 @@ import (
 func main() {
 
 	postgresURL := "postgresql://username:password@localhost:5432/core?sslmode=disable"
-	db := database.NewDataBase(postgresURL)
-	defer db.CloseDataBase()
+	dbGoods := database.NewDataBase(postgresURL)
+	dbUsers := database.UserDataBase(postgresURL)
+	defer dbGoods.CloseDataBase()
+	defer dbUsers.CloseUsersDataBase()
 
-	serv := server.New(":8080", db)
+	serv := server.New(":8080", dbGoods, dbUsers)
 	serv.StartServer()
 }
