@@ -49,6 +49,7 @@ func (r *Server) newApi() *gin.Engine {
 	engine.POST("/login", r.handlerLoginUser)
 	engine.PUT("/updateUser", r.handlerUpdateUser)
 	engine.PUT("/basket/buy", r.handlerBuyBasket)
+	engine.PUT("/user/addCoins", r.handlerAddCoins)
 	return engine
 }
 
@@ -372,11 +373,67 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-
 	ctx.Status(http.StatusOK)
+}
 
+type ResCoins struct {
+	ID    string `json:"id"`
+	Coins int    `json:"coins"`
+}
+
+func (r *Server) handlerAddCoins(ctx *gin.Context) {
+	var resCoins ResCoins
+	if err := json.NewDecoder(ctx.Request.Body).Decode(&resCoins); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	tx, err := r.usersDB.DB.Begin()
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
+
+	if err := r.usersDB.AddCoins(tx, resCoins.Coins, resCoins.ID); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 }
 
 func (r *Server) StartServer() {
 	r.newApi().Run(r.host)
 }
+
+// func (r *Server) handlerGetProduct(ctx *gin.Context) {
+// 	ID := ctx.Param("ID")
+// 	res, err := r.goodsDB.GetProduct(ID)
+// 	if err != nil {
+// 		ctx.AbortWithStatus(http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	// photoData теперь предположительно уже в байтовом формате
+// 	photoData := res.Photo
+
+// 	// Сохраняем изображение в файл
+// 	fileName := fmt.Sprintf("photo_%s.png", ID)
+// 	err = os.WriteFile(fileName, photoData, 0644) // Права доступа 0644
+// 	if err != nil {
+// 		ctx.AbortWithStatus(http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	ctx.JSON(http.StatusOK, res)
+// }

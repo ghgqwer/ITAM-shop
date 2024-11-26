@@ -19,6 +19,8 @@ const (
 
 	updateUser = `UPDATE users SET login = $1, password = $2, isAdmin = $3, wallet = $4 
 	WHERE id = $5` //to rewrite login, password, adm, wall
+
+	addCoins = `UPDATE users SET wallet = wallet + $1 WHERE id = $2`
 )
 
 type UsersDataBase struct {
@@ -68,6 +70,13 @@ func (d *UsersDataBase) UdpateUser(tx *sql.Tx, login, password string, isAdmin b
 	if _, err := tx.Exec(updateUser,
 		login, password, isAdmin, balance, id); err != nil {
 		return fmt.Errorf("User doesnt update: %w", err)
+	}
+	return nil
+}
+
+func (d *UsersDataBase) AddCoins(tx *sql.Tx, coins int, id string) error {
+	if _, err := tx.Exec(addCoins, coins, id); err != nil {
+		return fmt.Errorf("Coins dont add: %w", err)
 	}
 	return nil
 }
