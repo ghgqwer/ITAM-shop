@@ -13,6 +13,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Получить один товар по ID
+// sample link: GET /api/product/{ID}
+
+type GetProductResponse struct {
+	ID          string
+	Name        string
+	Description string
+	Count       int
+	Price       int
+	IsUnique    bool
+	Category    string
+	Photo       []byte
+}
+
+// sample Response:
+// JSON
+//
+//	{
+//		"ID": "5",
+//		"Name": "T-shirt",
+//		"Description": "Cool t-shirst",
+//		"Count": 2,
+//		"Price": 10,
+//		"IsUnique": false,
+//		"Category": "clothes",
+//		"Photo": binary Photo
+//	}
+
 func (r *Server) handlerGetProduct(ctx *gin.Context) {
 	ID := ctx.Param("ID")
 	res, err := r.goodsDB.GetProduct(ID)
@@ -23,29 +51,32 @@ func (r *Server) handlerGetProduct(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, res)
 }
 
-// type PostProductRequest struct {
-// 	ID          string `json:"id"`
-// 	Name        string `json:"name"`
-// 	Description string `json:"description"`
-// 	Count       string `json:"count"`
-// 	Price       string `json:"price"`
-// 	IsUnique    bool   `json:"isUnique"`
-// 	Category    string `json:"category"`
-// }
+//Добавить товар
 
-// type PostProductResponse struct{
+// sample link: POST /api/admin/storageProduct
 
-// }
-
-type Product struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Count       string `json:"count"`
-	Price       string `json:"price"`
-	IsUnique    bool   `json:"isUnique"`
-	Category    string `json:"category"`
+type PostProductRequest struct {
+	Name        string
+	Description string
+	Count       int
+	Price       int
+	IsUnique    bool
+	Category    string
+	Photo       []byte
 }
+
+// sample Request:
+// JSON + Cookie
+//
+//	{
+//		"Name": "T-shirt",
+//		"Description": "Cool t-shirst",
+//		"Count": 2,
+//		"Price": 10,
+//		"IsUnique": false,
+//		"Category": "clothes",
+//		"Photo": binary Photo
+//	}
 
 func (r *Server) handlerPostProduct(ctx *gin.Context) {
 	var product database.Product
@@ -91,9 +122,34 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
-func (r *Server) handlerPutProduct(ctx *gin.Context) {
-	//ID := ctx.Param("ID")
+//Обновить данные в товаре
 
+// sample link: PUT /api/admin/storageProduct
+
+type PutProductRequest struct {
+	ID          string
+	Name        string
+	Description string
+	Count       int
+	Price       int
+	IsUnique    bool
+	Category    string
+	Photo       []byte
+}
+
+// sample Request:
+// JSON + Cookie
+//	{
+//		"ID": "6",
+//		"Name": "T-shirt",
+//		"Description": "Very cool T-shirt",
+//		"Count": 4,
+//		"Price": 20,
+//		"IsUnique": true,
+//		"Category": "clothes"
+//	}
+
+func (r *Server) handlerPutProduct(ctx *gin.Context) {
 	var product database.Product
 	if err := json.NewDecoder(ctx.Request.Body).Decode(&product); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
@@ -147,10 +203,22 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
-func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
-	//ID := ctx.Param("ID")
+//Удалить товар
 
-	var product Product
+// sample link: DELETE /api/admin/storageProduct
+
+type DeleteProductRequest struct {
+	ID string
+}
+
+// sample Request:
+// JSON + Cookie
+// {
+// 		"ID": "2"
+// }
+
+func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
+	var product DeleteProductRequest
 	if err := json.NewDecoder(ctx.Request.Body).Decode(&product); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -181,6 +249,39 @@ func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
 
 	ctx.Status(http.StatusOK)
 }
+
+//Получить список всех товаров
+
+// sample link: GET /api/products
+
+type GetAllProductsResponse struct {
+	AllProducts []GetProductResponse
+}
+
+// sample Response:
+// JSON
+// [
+// 	{
+// 		"ID": "5",
+// 		"Name": "T-shirt",
+// 		"Description": "Cool t-shirst",
+// 		"Count": 2,
+// 		"Price": 10,
+// 		"IsUnique": false,
+// 		"Category": "clothes",
+// 		"Photo": binary Photo
+// 	},
+// 		{
+// 		"ID": "5",
+// 		"Name": "T-shirt",
+// 		"Description": "Cool t-shirst",
+// 		"Count": 2,
+// 		"Price": 10,
+// 		"IsUnique": false,
+// 		"Category": "clothes",
+// 		"Photo": binary Photo
+// 	}
+// ]
 
 func (r *Server) handlerGetGoods(ctx *gin.Context) {
 	res, err := r.goodsDB.GetAllGoods()

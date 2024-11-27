@@ -17,10 +17,6 @@ type Product struct {
 	Photo       []byte
 }
 
-type Storage struct {
-	Products []Product
-}
-
 const (
 	CreateDB = `CREATE TABLE IF NOT EXISTS goods (
 	id bigserial PRIMARY KEY, 

@@ -1,4 +1,5 @@
 username.session.sql
 .DS_Store
-./backend/images
+/backend/images
 .vscode
+/backend/.vscode

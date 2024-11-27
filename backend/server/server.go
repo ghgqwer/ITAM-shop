@@ -33,21 +33,22 @@ func (r *Server) newApi() *gin.Engine {
 		ctx.Status(200)
 	})
 
-	point := engine.Group("/api", r.authentication())
+	authUsers := engine.Group("/api", r.authentication())
+	deafultUsers := engine.Group("/api")
 
-	engine.GET("/product/:ID", r.handlerGetProduct) // sample - /api/product/:ID
-	engine.GET("/products", r.handlerGetGoods)
+	deafultUsers.GET("/product/:ID", r.handlerGetProduct) // sample - /api/product/:ID
+	deafultUsers.GET("/products", r.handlerGetGoods)
 
-	engine.POST("/api/signUp", r.handlerSignUpUser)
-	engine.POST("/apilogin", r.handlerLoginUser)
+	deafultUsers.POST("/signUp", r.handlerSignUpUser)
+	deafultUsers.POST("/login", r.handlerLoginUser)
 
-	point.PUT("/updateUser", r.handlerUpdateUser)
-	point.PUT("/basket/buy", r.handlerBuyBasket)
+	authUsers.PUT("/updateUser", r.handlerUpdateUser)
+	authUsers.PUT("/basket/buy", r.handlerBuyBasket)
 
-	point.POST("/admin/storageProduct", r.handlerPostProduct)
-	point.PUT("/admin/storageProduct", r.handlerPutProduct)
-	point.DELETE("/admin/storageProduct", r.handlerDeleteProduct)
-	point.PUT("/admin/addCoins", r.handlerAddCoins)
+	authUsers.POST("/admin/storageProduct", r.handlerPostProduct)
+	authUsers.PUT("/admin/storageProduct", r.handlerPutProduct)
+	authUsers.DELETE("/admin/storageProduct", r.handlerDeleteProduct)
+	authUsers.PUT("/admin/addCoins", r.handlerAddCoins)
 
 	//test endpoint
 	engine.GET("/checkCookie", r.handlerCheckCookie)
@@ -67,12 +68,10 @@ func (r *Server) StartServer() {
 // 		return
 // 	}
 
-// 	// photoData теперь предположительно уже в байтовом формате
 // 	photoData := res.Photo
 
-// 	// Сохраняем изображение в файл
 // 	fileName := fmt.Sprintf("photo_%s.png", ID)
-// 	err = os.WriteFile(fileName, photoData, 0644) // Права доступа 0644
+// 	err = os.WriteFile(fileName, photoData, 0644)
 // 	if err != nil {
 // 		ctx.AbortWithStatus(http.StatusInternalServerError)
 // 		return

@@ -66,12 +66,24 @@ func (r *Server) handlerCheckCookie(ctx *gin.Context) {
 	})
 }
 
+// Регистрация пользователя
+// sample link: POST /api/signUp
+
 type PostUserRequest struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 	IsAdmin  bool   `json:"isAdmin"`
 	Balance  int    `json:"balance"`
 }
+
+// sample Request:
+// JSON
+//	{
+//		"Login": "Vadim_cvbnqq",
+//		"Password": "123",
+//		"isAdmin": false,
+//		"Balance": 10000
+//	}
 
 func (r *Server) handlerSignUpUser(ctx *gin.Context) {
 	var user PostUserRequest
@@ -118,11 +130,27 @@ func (r *Server) handlerSignUpUser(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
+// Авторизация пользователя
+// sample link: POST /api/login
+
 type PostLoginRequest struct {
 	Login    string
 	Password string
 	IsAdmin  bool
 }
+
+// sample Request:
+// JSON
+//	{
+//		"Login": "Vadim_cvbnqq",
+//		"Password": "123"
+//	}
+
+type PostLoginResponse struct {
+	http.Cookie
+}
+
+// sample Response: Cookie
 
 func (r *Server) handlerLoginUser(ctx *gin.Context) {
 	var postLoginRequest PostLoginRequest
@@ -155,8 +183,29 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 	})
 }
 
+// Обновить данные пользователя
+// sample link: PUT /api/updateUser
+
+type PostUpdateUser struct {
+	ID       string `json:"id"`
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	IsAdmin  bool   `json:"isAdmin"`
+	Balance  int    `json:"balance"`
+}
+
+// sample Request:
+// JSON + Cookie
+//	{
+//		"ID": "6",
+//		"Login": "Vadim_cvbnqq",
+//		"Password": "123",
+//		"isAdmin": true,
+//		"Balance": 10
+//	}
+
 func (r *Server) handlerUpdateUser(ctx *gin.Context) {
-	var user User
+	var user PostUpdateUser
 	if err := json.NewDecoder(ctx.Request.Body).Decode(&user); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 	}
@@ -187,7 +236,10 @@ func (r *Server) handlerUpdateUser(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
-type Basket struct {
+// Купить содержимое корзины
+// sample link: PUT /api/basket/buy
+
+type PutBuyBasketResponse struct {
 	ID    string       `json:"id"`
 	Items []BasketItem `json:"items"`
 }
@@ -197,8 +249,24 @@ type BasketItem struct {
 	Count     int    `json:"count"`
 }
 
+// sample Request:
+// JSON + Cookie
+//	{
+//	    "ID": "1",
+//	    "Items": [
+//	        {
+//	            "ProductID": "3",
+//	            "Count": 1
+//	        },
+//	        {
+//	            "ProductID": "4",
+//	            "Count": 2
+//	        }
+//	    ]
+//	}
+
 func (r *Server) handlerBuyBasket(ctx *gin.Context) {
-	var basket Basket
+	var basket PutBuyBasketResponse
 	if err := json.NewDecoder(ctx.Request.Body).Decode(&basket); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -273,10 +341,20 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
+// Добавление коинов пользователю
+// sample link: PUT /api/admin/addCoins
+
 type ResCoins struct {
 	ID    string `json:"id"`
 	Coins int    `json:"coins"`
 }
+
+// sample Request:
+// JSON + Cookie
+//	{
+//		"ID":"3",
+//		"Coins":10000
+//	}
 
 func (r *Server) handlerAddCoins(ctx *gin.Context) {
 	var resCoins ResCoins
