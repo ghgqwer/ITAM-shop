@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	//DELETE FROM users;
 	createUsersDB = `CREATE TABLE IF NOT EXISTS users (
 	id bigserial PRIMARY KEY, 
 	login TEXT,
