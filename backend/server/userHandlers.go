@@ -1,19 +1,28 @@
 package server
 
 import (
+	"backend/pkg"
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
 	uniqueCookieKeyName = "uniqueKey"
-	uniqueCookieKey     = "uniqueKey123"
+	codingComplexity    = 32
+)
+
+var (
+	EncryptCookieKey = []byte("FGHSjgkdtjeod2347kHGDjke732nsdk4")
+	EncryptDBKey     = []byte("FGHSjgkdtjeod2347kHGDjke732nsdk4")
 )
 
 type User struct {
@@ -24,34 +33,85 @@ type User struct {
 	Balance  int    `json:"balance"`
 }
 
+type GetAuthMiddleware struct {
+	ExecutorLogin string
+}
+
 func (r *Server) authentication() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		cookie, err := ctx.Cookie(uniqueCookieKeyName)
+		var authMiddleware GetAuthMiddleware
+
+		bodyBytes, err := io.ReadAll(ctx.Request.Body)
+		if err != nil {
+			ctx.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		if err := json.Unmarshal(bodyBytes, &authMiddleware); err != nil {
+			ctx.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		encryptCookieAccessToken, err := ctx.Cookie(uniqueCookieKeyName) //cookie
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (cookies doesnt exist)"})
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		if cookie != uniqueCookieKey {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "bad Cookie"})
+		cookieAccessKey, err := pkg.Decrypt(encryptCookieAccessToken, EncryptCookieKey)
+		if err != nil || len(cookieAccessKey) == 0 {
+			ctx.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		var encryptDBAccessToken string
+		err = r.usersDB.DB.QueryRow("SELECT acсessToken FROM users WHERE login = $1", authMiddleware.ExecutorLogin).Scan(&encryptDBAccessToken)
+		if err != nil {
+			log.Printf("Error retrieving access token: %v", err)
+			ctx.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		dbAccessToken, err := pkg.Decrypt(encryptDBAccessToken, EncryptDBKey)
+		if err != nil {
+			ctx.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		if cookieAccessKey != dbAccessToken {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "bad Cookies"})
+			log.Printf("Tokens not equal %s != %s", encryptCookieAccessToken, dbAccessToken)
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		var exist bool
-		err = r.usersDB.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)", cookie).Scan(&exist)
+		err = r.usersDB.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)", authMiddleware.ExecutorLogin).Scan(&exist)
+		if err != nil || !exist {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (dont in db)"})
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		var isAdmin bool
+		err = r.usersDB.DB.QueryRow("SELECT isAdmin FROM users WHERE login = $1", authMiddleware.ExecutorLogin).Scan(&isAdmin)
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (dont in db)"})
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
+		ctx.Set("isAdmin", isAdmin)
+
 		ctx.Next()
 	}
 }
 
 func (r *Server) handlerCheckCookie(ctx *gin.Context) {
+
 	cookie, err := ctx.Cookie(uniqueCookieKeyName)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{
@@ -69,7 +129,7 @@ func (r *Server) handlerCheckCookie(ctx *gin.Context) {
 // Регистрация пользователя
 // sample link: POST /api/signUp
 
-type PostUserRequest struct {
+type PostSignUpUserRequest struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 	IsAdmin  bool   `json:"isAdmin"`
@@ -86,7 +146,7 @@ type PostUserRequest struct {
 //	}
 
 func (r *Server) handlerSignUpUser(ctx *gin.Context) {
-	var user PostUserRequest
+	var user PostSignUpUserRequest
 	if err := json.NewDecoder(ctx.Request.Body).Decode(&user); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -117,7 +177,13 @@ func (r *Server) handlerSignUpUser(ctx *gin.Context) {
 		}
 	}()
 
-	if err = r.usersDB.AddUser(tx, user.Login, user.Password, user.Balance); err != nil {
+	hashPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	if err = r.usersDB.AddUser(tx, user.Login, user.IsAdmin, hashPassword, user.Balance); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -160,21 +226,68 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 	}
 
 	var password string
-	if err := r.usersDB.DB.QueryRow("SELECT password FROM users WHERE login = $1", postLoginRequest.Login).Scan(&password); err != nil || password != postLoginRequest.Password {
+	err := r.usersDB.DB.QueryRow("SELECT password FROM users WHERE login = $1", postLoginRequest.Login).Scan(&password)
+	if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(password), []byte(postLoginRequest.Password))
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	accessToken, err := pkg.GenerateSafeToken(64)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	EncryptСookieAccessToken, err := pkg.Encrypt(accessToken, EncryptCookieKey)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	EncryptDBAccessToken, err := pkg.Encrypt(accessToken, EncryptDBKey)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	tx, err := r.usersDB.DB.Begin()
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
+
+	if _, err := tx.Exec("UPDATE users SET acсessToken = $1 WHERE login = $2", EncryptDBAccessToken, postLoginRequest.Login); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	expirationTime := time.Now().Add(24 * time.Hour)
 	cookie := http.Cookie{
-		Name:     uniqueCookieKeyName,
-		Value:    uniqueCookieKey,
+		Name:     uniqueCookieKeyName,      //postLoginRequest.Login
+		Value:    EncryptСookieAccessToken, //EncryptСookieAccessToken
 		Expires:  expirationTime,
 		HttpOnly: true,
 		Path:     "/",
 	}
 	http.SetCookie(ctx.Writer, &cookie)
-	ctx.Set("isAdmin", postLoginRequest.IsAdmin)
+
+	if err = tx.Commit(); err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"message":  "User logged in successfully.",
@@ -187,8 +300,8 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 // sample link: PUT /api/updateUser
 
 type PostUpdateUser struct {
-	ID       string `json:"id"`
-	Login    string `json:"login"`
+	GetAuthMiddleware
+	UserID   string `json:"userID"`
 	Password string `json:"password"`
 	IsAdmin  bool   `json:"isAdmin"`
 	Balance  int    `json:"balance"`
@@ -196,12 +309,13 @@ type PostUpdateUser struct {
 
 // sample Request:
 // JSON + Cookie
+//
 //	{
-//		"ID": "6",
-//		"Login": "Vadim_cvbnqq",
+//		"ExecutorLogin": "Vadim_cvbnqq1",
+//		"UserID": "1",
 //		"Password": "123",
-//		"isAdmin": true,
-//		"Balance": 10
+//		"IsAdmin": true,
+//		"Balance": 100000
 //	}
 
 func (r *Server) handlerUpdateUser(ctx *gin.Context) {
@@ -223,7 +337,8 @@ func (r *Server) handlerUpdateUser(ctx *gin.Context) {
 		}
 	}()
 
-	if err := r.usersDB.UdpateUser(tx, user.Login, user.Password, user.IsAdmin, user.Balance, user.ID); err != nil {
+	if err := r.usersDB.UdpateUser(tx, user.ExecutorLogin, user.Password, user.IsAdmin, user.Balance, user.UserID); err != nil {
+		log.Printf("Updating user with ID: %s, Login: %s, Balance: %d", user.UserID, user.ExecutorLogin, user.Balance)
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -240,8 +355,9 @@ func (r *Server) handlerUpdateUser(ctx *gin.Context) {
 // sample link: PUT /api/basket/buy
 
 type PutBuyBasketResponse struct {
-	ID    string       `json:"id"`
-	Items []BasketItem `json:"items"`
+	GetAuthMiddleware
+	UserID string       `json:"userID"`
+	Items  []BasketItem `json:"items"`
 }
 
 type BasketItem struct {
@@ -251,18 +367,20 @@ type BasketItem struct {
 
 // sample Request:
 // JSON + Cookie
+//
 //	{
-//	    "ID": "1",
-//	    "Items": [
-//	        {
-//	            "ProductID": "3",
-//	            "Count": 1
-//	        },
-//	        {
-//	            "ProductID": "4",
-//	            "Count": 2
-//	        }
-//	    ]
+//	  "ExecutorLogin": "Vadim_cvbnqq1",
+//	  "UserID": "1",
+//	  "Items": [
+//		  {
+//			  "ProductID": "2",
+//			  "Count": 1
+//		  },
+//		  {
+//			  "ProductID": "3",
+//			  "Count": 1
+//		  }
+//	  ]
 //	}
 
 func (r *Server) handlerBuyBasket(ctx *gin.Context) {
@@ -287,7 +405,7 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 
 	var user User
 	if err := r.usersDB.DB.QueryRow("SELECT login, wallet FROM users WHERE id = $1",
-		basket.ID).Scan(&user.Login, &user.Balance); err != nil {
+		basket.UserID).Scan(&user.Login, &user.Balance); err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -320,7 +438,7 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 
 	user.Balance -= totalPrice
 
-	_, err = tx.Exec(`UPDATE users SET wallet = $1 WHERE id = $2`, user.Balance, basket.ID)
+	_, err = tx.Exec(`UPDATE users SET wallet = $1 WHERE id = $2`, user.Balance, basket.UserID)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -339,50 +457,4 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 		return
 	}
 	ctx.Status(http.StatusOK)
-}
-
-// Добавление коинов пользователю
-// sample link: PUT /api/admin/addCoins
-
-type ResCoins struct {
-	ID    string `json:"id"`
-	Coins int    `json:"coins"`
-}
-
-// sample Request:
-// JSON + Cookie
-//	{
-//		"ID":"3",
-//		"Coins":10000
-//	}
-
-func (r *Server) handlerAddCoins(ctx *gin.Context) {
-	var resCoins ResCoins
-	if err := json.NewDecoder(ctx.Request.Body).Decode(&resCoins); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	tx, err := r.usersDB.DB.Begin()
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	defer func() {
-		if err != nil {
-			tx.Rollback()
-			return
-		}
-	}()
-
-	if err := r.usersDB.AddCoins(tx, resCoins.Coins, resCoins.ID); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
 }

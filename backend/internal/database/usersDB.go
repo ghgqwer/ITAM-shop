@@ -8,12 +8,15 @@ import (
 
 const (
 	//DELETE FROM users;
-	createUsersDB = `CREATE TABLE IF NOT EXISTS users (
+	//DROP TABLE IF EXISTS users;;
+	createUsersDB = `
+	CREATE TABLE IF NOT EXISTS users (
 	id bigserial PRIMARY KEY, 
 	login TEXT,
-	password TEXT, 
+	password BYTEA, 
 	isAdmin BOOL, 
-	wallet INT)`
+	wallet INT,
+	acсessToken TEXT)` //,acсessToken BYTEA
 
 	addUser = `INSERT INTO users (login, password, isAdmin, wallet) 
 	VALUES ($1, $2, $3, $4)`
@@ -24,6 +27,7 @@ const (
 	addCoins = `UPDATE users SET wallet = wallet + $1 WHERE id = $2`
 )
 
+// wyxBH1hpR0U70kgdPY3mdij2y/8FtS1Dn2GL3PKB/QFK6s0tp6tSRFW7VWZa4pdW4MORomdcOXG7fkkoStBroA==
 type UsersDataBase struct {
 	DB *sql.DB
 }
@@ -56,8 +60,8 @@ func UserDataBase(postgresURL string) *UsersDataBase {
 	return &UsersDataBase{DB: db}
 }
 
-func (d *UsersDataBase) AddUser(tx *sql.Tx, login, password string, balance int) error {
-	isAdmin := false
+func (d *UsersDataBase) AddUser(tx *sql.Tx, login string, isAdmin bool, password []byte, balance int) error {
+	//isAdmin := false
 	_, err := tx.Exec(addUser, login, password,
 		isAdmin, balance)
 	if err != nil {

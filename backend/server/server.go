@@ -45,13 +45,14 @@ func (r *Server) newApi() *gin.Engine {
 	authUsers.PUT("/updateUser", r.handlerUpdateUser)
 	authUsers.PUT("/basket/buy", r.handlerBuyBasket)
 
+	//admin
 	authUsers.POST("/admin/storageProduct", r.handlerPostProduct)
 	authUsers.PUT("/admin/storageProduct", r.handlerPutProduct)
 	authUsers.DELETE("/admin/storageProduct", r.handlerDeleteProduct)
 	authUsers.PUT("/admin/addCoins", r.handlerAddCoins)
 
 	//test endpoint
-	engine.GET("/checkCookie", r.handlerCheckCookie)
+	authUsers.GET("/checkCookie", r.handlerCheckCookie)
 
 	return engine
 }

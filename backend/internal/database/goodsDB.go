@@ -7,7 +7,7 @@ import (
 )
 
 type Product struct {
-	ID          string
+	ProductID   string
 	Name        string
 	Description string
 	Count       int
@@ -80,7 +80,7 @@ func (d *GoodsDataBase) DeleteProduct(tx *sql.Tx, id string) error {
 
 func (d *GoodsDataBase) UpdateProduct(tx *sql.Tx, product Product, photo []byte) error {
 	if _, err := tx.Exec(Udpate, product.Name, product.Description, product.Count, product.Price,
-		product.IsUnique, product.Category, photo, product.ID); err != nil {
+		product.IsUnique, product.Category, photo, product.ProductID); err != nil {
 		return fmt.Errorf("Product doesnt update: %w", err)
 	}
 	return nil
@@ -88,7 +88,7 @@ func (d *GoodsDataBase) UpdateProduct(tx *sql.Tx, product Product, photo []byte)
 
 func (d *GoodsDataBase) GetProduct(id string) (Product, error) {
 	var product Product
-	err := d.DB.QueryRow(Get, id).Scan(&product.ID, &product.Name,
+	err := d.DB.QueryRow(Get, id).Scan(&product.ProductID, &product.Name,
 		&product.Description, &product.Count, &product.Price,
 		&product.IsUnique, &product.Category, &product.Photo)
 	if err != nil {
@@ -109,7 +109,7 @@ func (d *GoodsDataBase) GetAllGoods() ([]Product, error) {
 
 	for rows.Next() {
 		var product Product
-		err := rows.Scan(&product.ID, &product.Name, &product.Description,
+		err := rows.Scan(&product.ProductID, &product.Name, &product.Description,
 			&product.Count, &product.Price, &product.IsUnique,
 			&product.Category, &product.Photo)
 		if err != nil {
