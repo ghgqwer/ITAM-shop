@@ -3,3 +3,5 @@ username.session.sql
 /backend/images
 .vscode
 /backend/.vscode
+/backend/.DS_Store
+/backend/cmd/.DS_Store
