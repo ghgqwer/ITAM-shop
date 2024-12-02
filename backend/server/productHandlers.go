@@ -10,7 +10,7 @@ import (
 // sample link: GET /api/product/{ID}
 
 type GetProductResponse struct {
-	ID          string
+	ProductID   string
 	Name        string
 	Description string
 	Count       int
@@ -66,7 +66,7 @@ type GetAllProductsResponse struct {
 // 		"Photo": binary Photo
 // 	},
 // 		{
-// 		"ID": "5",
+// 		"ProductID": "5",
 // 		"Name": "T-shirt",
 // 		"Description": "Cool t-shirst",
 // 		"Count": 2,
