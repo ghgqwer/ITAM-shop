@@ -47,7 +47,7 @@ func (r *Server) newApi() *gin.Engine {
 		ctx.Status(200)
 	})
 
-	authUsers := engine.Group("/api") //, r.authentication()
+	authUsers := engine.Group("/api", r.authentication()) //, r.authentication()
 	deafultUsers := engine.Group("/api")
 
 	deafultUsers.GET("/product/:ID", r.handlerGetProduct) // sample - /api/product/:ID

@@ -75,11 +75,11 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 		}
 	}()
 
-	// isAdmin := ctx.GetBool("isAdmin")
-	// if !isAdmin {
-	// 	ctx.AbortWithStatus(http.StatusForbidden)
-	// 	return
-	// }
+	isAdmin := ctx.GetBool("isAdmin")
+	if !isAdmin {
+		ctx.AbortWithStatus(http.StatusForbidden)
+		return
+	}
 
 	if err = r.goodsDB.AddProduct(tx, product, encoded); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
@@ -139,11 +139,11 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 		return
 	}
 
-	// isAdmin := ctx.GetBool("isAdmin")
-	// if !isAdmin {
-	// 	ctx.AbortWithStatus(http.StatusForbidden)
-	// 	return
-	// }
+	isAdmin := ctx.GetBool("isAdmin")
+	if !isAdmin {
+		ctx.AbortWithStatus(http.StatusForbidden)
+		return
+	}
 
 	file, err := os.Open(PhotoLink)
 	if err != nil {
@@ -217,11 +217,11 @@ func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
 		return
 	}
 
-	// isAdmin := ctx.GetBool("isAdmin")
-	// if !isAdmin {
-	// 	ctx.AbortWithStatus(http.StatusForbidden)
-	// 	return
-	// }
+	isAdmin := ctx.GetBool("isAdmin")
+	if !isAdmin {
+		ctx.AbortWithStatus(http.StatusForbidden)
+		return
+	}
 
 	tx, err := r.goodsDB.DB.Begin()
 	if err != nil {
@@ -274,11 +274,11 @@ func (r *Server) handlerAddCoins(ctx *gin.Context) {
 		return
 	}
 
-	// isAdmin := ctx.GetBool("isAdmin")
-	// if !isAdmin {
-	// 	ctx.AbortWithStatus(http.StatusForbidden)
-	// 	return
-	// }
+	isAdmin := ctx.GetBool("isAdmin")
+	if !isAdmin {
+		ctx.AbortWithStatus(http.StatusForbidden)
+		return
+	}
 
 	tx, err := r.usersDB.DB.Begin()
 	if err != nil {
