@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	postgresURL := "postgresql://username:password@localhost:5432/core?sslmode=disable"
+	postgresURL := "postgresql://root:cP0gZTioQbR4pNP5@89.111.154.197:5432/core?sslmode=disable"
 	dbGoods := database.NewDataBase(postgresURL)
 	dbUsers := database.UserDataBase(postgresURL)
 	defer dbGoods.CloseDataBase()

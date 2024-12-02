@@ -18,7 +18,9 @@ type Product struct {
 }
 
 const (
-	CreateDB = `CREATE TABLE IF NOT EXISTS goods (
+	//DROP TABLE IF EXISTS goods;
+	CreateDB = `
+	CREATE TABLE IF NOT EXISTS goods (
 	id bigserial PRIMARY KEY, 
 	name TEXT,
 	description TEXT, 
@@ -61,7 +63,7 @@ func NewDataBase(postgresURL string) *GoodsDataBase {
 	return &GoodsDataBase{DB: db}
 }
 
-func (d *GoodsDataBase) AddProduct(tx *sql.Tx, product Product, photo []byte) error {
+func (d *GoodsDataBase) AddProduct(tx *sql.Tx, product Product, photo string) error {
 	_, err := tx.Exec(Add, product.Name, product.Description, product.Count, product.Price,
 		product.IsUnique, product.Category, photo)
 	if err != nil {

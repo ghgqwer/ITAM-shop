@@ -1,13 +1,17 @@
 package server
 
+//127.0.0.1
 import (
 	"backend/internal/database"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 const (
-	PhotoLink = "../images/temp_image_1864F5A8-BB50-48B2-9D6A-39291A775AB2.WEBP"
+	PhotoLink = "./images/sampleTshirt.jpg"
+	//PhotoLink = "../images/sampleTshirt.jpg"
 )
 
 type Server struct {
@@ -29,11 +33,21 @@ func New(host string, dbGoods *database.GoodsDataBase, dbUsers *database.UsersDa
 func (r *Server) newApi() *gin.Engine {
 	engine := gin.New()
 
+	engine.Use(cors.New(cors.Config{
+		AllowAllOrigins: true,
+		//		AllowOrigins:     []string{"http://localhost:5173"}, // Разрешите доступ для этого источника
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	engine.GET("/health", func(ctx *gin.Context) {
 		ctx.Status(200)
 	})
 
-	authUsers := engine.Group("/api", r.authentication())
+	authUsers := engine.Group("/api") //, r.authentication()
 	deafultUsers := engine.Group("/api")
 
 	deafultUsers.GET("/product/:ID", r.handlerGetProduct) // sample - /api/product/:ID
@@ -53,13 +67,23 @@ func (r *Server) newApi() *gin.Engine {
 
 	//test endpoint
 	authUsers.GET("/checkCookie", r.handlerCheckCookie)
-
 	return engine
 }
 
 func (r *Server) StartServer() {
 	r.newApi().Run(r.host)
 }
+
+// engine.Use(cors.New(cors.Config{
+
+// 	AllowAllOrigins: true,
+// 	// AllowOrigins: []string{"http://example.com"},
+// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
+// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+// 	ExposeHeaders:    []string{"Content-Length"},
+// 	AllowCredentials: true,
+// 	MaxAge:           12 * time.Hour,
+// }))
 
 // func (r *Server) handlerGetProduct(ctx *gin.Context) {
 // 	ID := ctx.Param("ID")

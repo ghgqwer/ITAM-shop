@@ -3,6 +3,7 @@ package server
 import (
 	"backend/internal/database"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
@@ -59,6 +60,7 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	encoded := base64.StdEncoding.EncodeToString(binaryData)
 
 	tx, err := r.goodsDB.DB.Begin()
 	if err != nil {
@@ -73,14 +75,21 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 		}
 	}()
 
-	isAdmin := ctx.GetBool("isAdmin")
-	if !isAdmin {
-		ctx.AbortWithStatus(http.StatusForbidden)
+	// isAdmin := ctx.GetBool("isAdmin")
+	// if !isAdmin {
+	// 	ctx.AbortWithStatus(http.StatusForbidden)
+	// 	return
+	// }
+
+	if err = r.goodsDB.AddProduct(tx, product, encoded); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	if err = r.goodsDB.AddProduct(tx, product, binaryData); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+	var lastProductID string
+	err = tx.QueryRow("SELECT id FROM goods WHERE name = $1 ORDER BY id DESC LIMIT 1", product.Name).Scan(&lastProductID)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
@@ -89,7 +98,7 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Status(http.StatusOK)
+	ctx.JSON(http.StatusOK, gin.H{"id": lastProductID})
 }
 
 //Обновить данные в товаре
@@ -130,11 +139,11 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 		return
 	}
 
-	isAdmin := ctx.GetBool("isAdmin")
-	if !isAdmin {
-		ctx.AbortWithStatus(http.StatusForbidden)
-		return
-	}
+	// isAdmin := ctx.GetBool("isAdmin")
+	// if !isAdmin {
+	// 	ctx.AbortWithStatus(http.StatusForbidden)
+	// 	return
+	// }
 
 	file, err := os.Open(PhotoLink)
 	if err != nil {
@@ -208,11 +217,11 @@ func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
 		return
 	}
 
-	isAdmin := ctx.GetBool("isAdmin")
-	if !isAdmin {
-		ctx.AbortWithStatus(http.StatusForbidden)
-		return
-	}
+	// isAdmin := ctx.GetBool("isAdmin")
+	// if !isAdmin {
+	// 	ctx.AbortWithStatus(http.StatusForbidden)
+	// 	return
+	// }
 
 	tx, err := r.goodsDB.DB.Begin()
 	if err != nil {
@@ -245,8 +254,8 @@ func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
 
 type ResCoins struct {
 	GetAuthMiddleware
-	UserID string `json:"userID"`
-	Coins  int    `json:"coins"`
+	UserLogin string `json:"userLogin"`
+	Coins     int    `json:"coins"`
 }
 
 // sample Request:
@@ -254,7 +263,7 @@ type ResCoins struct {
 //
 //	{
 //		"ExecutorLogin": "Vadim_cvbnqq1",
-//		"UserID":"1",
+//		"UserLogin":"Vadim_cvbnqq2",
 //		"Coins":10000
 //	}
 
@@ -265,11 +274,11 @@ func (r *Server) handlerAddCoins(ctx *gin.Context) {
 		return
 	}
 
-	isAdmin := ctx.GetBool("isAdmin")
-	if !isAdmin {
-		ctx.AbortWithStatus(http.StatusForbidden)
-		return
-	}
+	// isAdmin := ctx.GetBool("isAdmin")
+	// if !isAdmin {
+	// 	ctx.AbortWithStatus(http.StatusForbidden)
+	// 	return
+	// }
 
 	tx, err := r.usersDB.DB.Begin()
 	if err != nil {
@@ -284,7 +293,7 @@ func (r *Server) handlerAddCoins(ctx *gin.Context) {
 		}
 	}()
 
-	if err := r.usersDB.AddCoins(tx, resCoins.Coins, resCoins.UserID); err != nil {
+	if err := r.usersDB.AddCoinsByLogin(tx, resCoins.Coins, resCoins.UserLogin); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}

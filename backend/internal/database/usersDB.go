@@ -8,7 +8,7 @@ import (
 
 const (
 	//DELETE FROM users;
-	//DROP TABLE IF EXISTS users;;
+	//DROP TABLE IF EXISTS users;
 	createUsersDB = `
 	CREATE TABLE IF NOT EXISTS users (
 	id bigserial PRIMARY KEY, 
@@ -25,6 +25,8 @@ const (
 	WHERE id = $5` //to rewrite login, password, adm, wall
 
 	addCoins = `UPDATE users SET wallet = wallet + $1 WHERE id = $2`
+
+	addCoinsByLogin = `UPDATE users SET wallet = wallet + $1 WHERE login = $2`
 )
 
 // wyxBH1hpR0U70kgdPY3mdij2y/8FtS1Dn2GL3PKB/QFK6s0tp6tSRFW7VWZa4pdW4MORomdcOXG7fkkoStBroA==
@@ -81,6 +83,13 @@ func (d *UsersDataBase) UdpateUser(tx *sql.Tx, login, password string, isAdmin b
 
 func (d *UsersDataBase) AddCoins(tx *sql.Tx, coins int, id string) error {
 	if _, err := tx.Exec(addCoins, coins, id); err != nil {
+		return fmt.Errorf("Coins dont add: %w", err)
+	}
+	return nil
+}
+
+func (d *UsersDataBase) AddCoinsByLogin(tx *sql.Tx, coins int, login string) error {
+	if _, err := tx.Exec(addCoinsByLogin, coins, login); err != nil {
 		return fmt.Errorf("Coins dont add: %w", err)
 	}
 	return nil

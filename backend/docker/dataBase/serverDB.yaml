@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:13.3
+    environment:
+      POSTGRES_DB: "core"
+      POSTGRES_USER: "root"
+      POSTGRES_PASSWORD: "cP0gZTioQbR4pNP5"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+volumes:
+  postgres:
