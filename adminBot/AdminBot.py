@@ -8,8 +8,8 @@ from aiogram.dispatcher.filters import Text
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 
-API_TOKEN = '7309994657:AAGDVcEVOQCdzh3ni1l78EROHk5n74r59-s'
-API_URL = 'http://89.111.154.197:8080/api/admin/addCoins'
+API_TOKEN = ''
+API_URL = ''
 
 bot = Bot(token=API_TOKEN)
 storage = MemoryStorage()
