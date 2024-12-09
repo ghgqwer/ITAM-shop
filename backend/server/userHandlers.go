@@ -33,13 +33,19 @@ type User struct {
 	Balance  int    `json:"balance"`
 }
 
-type GetAuthMiddleware struct {
+// type GetAuthMiddleware struct {
+// 	ExecutorLogin string
+// 	IsAdmin       bool
+// }
+
+type InfoDB struct {
+	UserID        string
 	ExecutorLogin string
+	IsAdmin       bool
 }
 
 func (r *Server) authentication() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		var authMiddleware GetAuthMiddleware
 
 		bodyBytes, err := io.ReadAll(ctx.Request.Body)
 		if err != nil {
@@ -47,82 +53,54 @@ func (r *Server) authentication() gin.HandlerFunc {
 			return
 		}
 
-		if err := json.Unmarshal(bodyBytes, &authMiddleware); err != nil {
-			ctx.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-
 		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-		encryptCookieAccessToken, err := ctx.Cookie(uniqueCookieKeyName) //cookie
+		cookieAccessKey, err := ctx.Cookie(uniqueCookieKeyName) //cookie
 		if err != nil {
 			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (cookies doesnt exist)"})
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		cookieAccessKey, err := pkg.Decrypt(encryptCookieAccessToken, EncryptCookieKey)
-		if err != nil || len(cookieAccessKey) == 0 {
-			ctx.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
+		// cookieAccessKey, err := pkg.Decrypt(encryptCookieAccessToken, EncryptCookieKey)
+		// if err != nil || len(cookieAccessKey) == 0 {
+		// 	ctx.AbortWithStatus(http.StatusInternalServerError)
+		// 	return
+		// }
 
-		var encryptDBAccessToken string
-		err = r.usersDB.DB.QueryRow("SELECT acсessToken FROM users WHERE login = $1", authMiddleware.ExecutorLogin).Scan(&encryptDBAccessToken)
+		var infoDB InfoDB
+		err = r.usersDB.DB.QueryRow("SELECT id, login, isAdmin FROM users WHERE acсessToken = $1", cookieAccessKey).Scan(&infoDB.UserID, &infoDB.ExecutorLogin, &infoDB.IsAdmin)
 		if err != nil {
 			log.Printf("Error retrieving access token: %v", err)
 			ctx.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
 
-		dbAccessToken, err := pkg.Decrypt(encryptDBAccessToken, EncryptDBKey)
-		if err != nil {
-			ctx.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-
-		if cookieAccessKey != dbAccessToken {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "bad Cookies"})
-			log.Printf("Tokens not equal %s != %s", encryptCookieAccessToken, dbAccessToken)
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		var exist bool
-		err = r.usersDB.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)", authMiddleware.ExecutorLogin).Scan(&exist)
-		if err != nil || !exist {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (dont in db)"})
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		var isAdmin bool
-		err = r.usersDB.DB.QueryRow("SELECT isAdmin FROM users WHERE login = $1", authMiddleware.ExecutorLogin).Scan(&isAdmin)
-		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (dont in db)"})
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		ctx.Set("isAdmin", isAdmin)
+		ctx.Set("userID", infoDB.UserID)
+		ctx.Set("executorLogin", infoDB.ExecutorLogin)
+		ctx.Set("isAdmin", infoDB.IsAdmin)
 
 		ctx.Next()
 	}
 }
 
 func (r *Server) handlerCheckCookie(ctx *gin.Context) {
+	log.Println("Checking for cookie...")
 
 	cookie, err := ctx.Cookie(uniqueCookieKeyName)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{
-			"message": "Cookie not found",
-		})
+		log.Printf("Error retrieving cookie: %v", err)
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Cookie not found"})
 		return
 	}
+
+	log.Printf("Cookie found: %s", cookie)
 
 	ctx.JSON(http.StatusOK, gin.H{
 		"value":   cookie,
 		"isAdmin": ctx.GetBool("isAdmin"),
+		"login":   ctx.GetString("executorLogin"),
+		"ID":      ctx.GetString("userID"),
 	})
 }
 
@@ -130,6 +108,7 @@ func (r *Server) handlerCheckCookie(ctx *gin.Context) {
 // sample link: POST /api/signUp
 
 type PostSignUpUserRequest struct {
+	ID       string `json:"id"`
 	Login    string `json:"login"`
 	Password string `json:"password"`
 	IsAdmin  bool   `json:"isAdmin"`
@@ -183,7 +162,7 @@ func (r *Server) handlerSignUpUser(ctx *gin.Context) {
 		return
 	}
 
-	if err = r.usersDB.AddUser(tx, user.Login, user.IsAdmin, hashPassword, user.Balance); err != nil {
+	if err = r.usersDB.AddUser(tx, user.ID, user.Login, user.IsAdmin, hashPassword, user.Balance); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -244,17 +223,17 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 		return
 	}
 
-	EncryptСookieAccessToken, err := pkg.Encrypt(accessToken, EncryptCookieKey)
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
+	// EncryptСookieAccessToken, err := pkg.Encrypt(accessToken, EncryptCookieKey)
+	// if err != nil {
+	// 	ctx.AbortWithStatus(http.StatusInternalServerError)
+	// 	return
+	// }
 
-	EncryptDBAccessToken, err := pkg.Encrypt(accessToken, EncryptDBKey)
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
+	// EncryptDBAccessToken, err := pkg.Encrypt(accessToken, EncryptDBKey)
+	// if err != nil {
+	// 	ctx.AbortWithStatus(http.StatusInternalServerError)
+	// 	return
+	// }
 
 	tx, err := r.usersDB.DB.Begin()
 	if err != nil {
@@ -269,17 +248,17 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 		}
 	}()
 
-	if _, err := tx.Exec("UPDATE users SET acсessToken = $1 WHERE login = $2", EncryptDBAccessToken, postLoginRequest.Login); err != nil {
+	if _, err := tx.Exec("UPDATE users SET acсessToken = $1 WHERE login = $2", accessToken, postLoginRequest.Login); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	expirationTime := time.Now().Add(24 * time.Hour)
 	cookie := http.Cookie{
-		Name:     uniqueCookieKeyName,      //postLoginRequest.Login
-		Value:    EncryptСookieAccessToken, //EncryptСookieAccessToken
+		Name:     uniqueCookieKeyName, //postLoginRequest.Login
+		Value:    accessToken,         //EncryptСookieAccessToken
 		Expires:  expirationTime,
-		HttpOnly: true,
+		HttpOnly: false,
 		Path:     "/",
 	}
 	http.SetCookie(ctx.Writer, &cookie)
@@ -300,7 +279,8 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 // sample link: PUT /api/updateUser
 
 type PostUpdateUser struct {
-	GetAuthMiddleware
+	//GetAuthMiddleware
+	Login    string `json:"login"`
 	UserID   string `json:"userID"`
 	Password string `json:"password"`
 	IsAdmin  bool   `json:"isAdmin"`
@@ -311,7 +291,6 @@ type PostUpdateUser struct {
 // JSON + Cookie
 //
 //	{
-//		"ExecutorLogin": "Vadim_cvbnqq1",
 //		"UserID": "1",
 //		"Password": "123",
 //		"IsAdmin": true,
@@ -337,8 +316,7 @@ func (r *Server) handlerUpdateUser(ctx *gin.Context) {
 		}
 	}()
 
-	if err := r.usersDB.UdpateUser(tx, user.ExecutorLogin, user.Password, user.IsAdmin, user.Balance, user.UserID); err != nil {
-		log.Printf("Updating user with ID: %s, Login: %s, Balance: %d", user.UserID, user.ExecutorLogin, user.Balance)
+	if err := r.usersDB.UdpateUser(tx, user.Login, user.Password, user.IsAdmin, user.Balance, user.UserID); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -355,9 +333,9 @@ func (r *Server) handlerUpdateUser(ctx *gin.Context) {
 // sample link: PUT /api/basket/buy
 
 type PutBuyBasketResponse struct {
-	GetAuthMiddleware
-	UserID string       `json:"userID"`
-	Items  []BasketItem `json:"items"`
+	//GetAuthMiddleware
+	//UserID string       `json:"userID"`
+	Items []BasketItem `json:"items"`
 }
 
 type BasketItem struct {
@@ -369,7 +347,6 @@ type BasketItem struct {
 // JSON + Cookie
 //
 //	{
-//	  "ExecutorLogin": "Vadim_cvbnqq1",
 //	  "UserID": "1",
 //	  "Items": [
 //		  {
@@ -403,9 +380,11 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 		}
 	}()
 
+	userID := ctx.GetString("userID")
+
 	var user User
 	if err := r.usersDB.DB.QueryRow("SELECT login, wallet FROM users WHERE id = $1",
-		basket.UserID).Scan(&user.Login, &user.Balance); err != nil {
+		userID).Scan(&user.Login, &user.Balance); err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -438,7 +417,7 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 
 	user.Balance -= totalPrice
 
-	_, err = tx.Exec(`UPDATE users SET wallet = $1 WHERE id = $2`, user.Balance, basket.UserID)
+	_, err = tx.Exec(`UPDATE users SET wallet = $1 WHERE id = $2`, user.Balance, userID)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -458,3 +437,32 @@ func (r *Server) handlerBuyBasket(ctx *gin.Context) {
 	}
 	ctx.Status(http.StatusOK)
 }
+
+// dbAccessToken, err := pkg.Decrypt(encryptDBAccessToken, EncryptDBKey)
+// if err != nil {
+// 	ctx.AbortWithStatus(http.StatusInternalServerError)
+// 	return
+// }
+
+// if cookieAccessKey != dbAccessToken {
+// 	ctx.JSON(http.StatusUnauthorized, gin.H{"error": "bad Cookies"})
+// 	log.Printf("Tokens not equal %s != %s", encryptCookieAccessToken, dbAccessToken)
+// 	ctx.AbortWithStatus(http.StatusUnauthorized)
+// 	return
+// }
+
+// var exist bool
+// err = r.usersDB.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)", authMiddleware.ExecutorLogin).Scan(&exist)
+// if err != nil || !exist {
+// 	ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (dont in db)"})
+// 	ctx.AbortWithStatus(http.StatusUnauthorized)
+// 	return
+// }
+
+// var isAdmin bool
+// err = r.usersDB.DB.QueryRow("SELECT isAdmin FROM users WHERE login = $1", authMiddleware.ExecutorLogin).Scan(&isAdmin)
+// if err != nil {
+// 	ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (dont in db)"})
+// 	ctx.AbortWithStatus(http.StatusUnauthorized)
+// 	return
+// }

@@ -14,24 +14,27 @@ type Product struct {
 	Price       int
 	IsUnique    bool
 	Category    string
-	Photo       []byte
+	Photo       string
 }
 
 const (
-	//DROP TABLE IF EXISTS goods;
+	// DROP TABLE IF EXISTS cart;
+	// DROP TABLE IF EXISTS goods;
+	//DELETE FROM goods;
 	CreateDB = `
 	CREATE TABLE IF NOT EXISTS goods (
-	id bigserial PRIMARY KEY, 
+	id TEXT PRIMARY KEY, 
 	name TEXT,
 	description TEXT, 
 	count INT, 
 	price INT, 
 	isUnique BOOL, 
 	category TEXT,
-	photo BYTEA)`
+	photo TEXT, 
+	UNIQUE (id))` //BYTEA
 
-	Add = `INSERT INTO goods (name, description, count, price, isUnique, category, photo) 
-	VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	Add = `INSERT INTO goods (id, name, description, count, price, isUnique, category, photo) 
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	Delete = `DELETE FROM goods WHERE id = $1`
 
@@ -63,9 +66,9 @@ func NewDataBase(postgresURL string) *GoodsDataBase {
 	return &GoodsDataBase{DB: db}
 }
 
-func (d *GoodsDataBase) AddProduct(tx *sql.Tx, product Product, photo string) error {
-	_, err := tx.Exec(Add, product.Name, product.Description, product.Count, product.Price,
-		product.IsUnique, product.Category, photo)
+func (d *GoodsDataBase) AddProduct(tx *sql.Tx, product Product) error { //, photo string
+	_, err := tx.Exec(Add, product.ProductID, product.Name, product.Description, product.Count, product.Price,
+		product.IsUnique, product.Category, product.Photo)
 	if err != nil {
 		log.Printf("Error adding product: %v", err)
 		return fmt.Errorf("failed to add product: %w", err)
@@ -80,9 +83,9 @@ func (d *GoodsDataBase) DeleteProduct(tx *sql.Tx, id string) error {
 	return nil
 }
 
-func (d *GoodsDataBase) UpdateProduct(tx *sql.Tx, product Product, photo []byte) error {
+func (d *GoodsDataBase) UpdateProduct(tx *sql.Tx, product Product) error { //, photo []byte
 	if _, err := tx.Exec(Udpate, product.Name, product.Description, product.Count, product.Price,
-		product.IsUnique, product.Category, photo, product.ProductID); err != nil {
+		product.IsUnique, product.Category, product.Photo, product.ProductID); err != nil {
 		return fmt.Errorf("Product doesnt update: %w", err)
 	}
 	return nil

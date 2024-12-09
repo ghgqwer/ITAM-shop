@@ -3,13 +3,10 @@ package server
 import (
 	"backend/internal/database"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"io"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,21 +16,21 @@ import (
 // sample link: POST /api/admin/storageProduct
 
 type PostProductRequest struct {
-	GetAuthMiddleware
+	//GetAuthMiddleware
+	ProductID   string
 	Name        string
 	Description string
 	Count       int
 	Price       int
 	IsUnique    bool
 	Category    string
-	Photo       []byte
+	Photo       string
 }
 
 // sample Request:
 // JSON + Cookie
 //
 //	{
-//		  "ExecutorLogin": "Vadim_cvbnqq1",
 //		  "Name": "T-shirt",
 //		  "Description": "Cool t-shirst",
 //		  "Count": 100,
@@ -46,32 +43,19 @@ type PostProductRequest struct {
 func (r *Server) handlerPostProduct(ctx *gin.Context) {
 	var product database.Product
 	if err := json.NewDecoder(ctx.Request.Body).Decode(&product); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON payload"})
 		return
 	}
 
-	file, err := os.Open(PhotoLink)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	binaryData, err := io.ReadAll(file)
-	if err != nil {
-		log.Fatal(err)
-	}
-	encoded := base64.StdEncoding.EncodeToString(binaryData)
-
 	tx, err := r.goodsDB.DB.Begin()
 	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not start transaction: " + err.Error()})
 		return
 	}
 
 	defer func() {
 		if err != nil {
 			tx.Rollback()
-			return
 		}
 	}()
 
@@ -81,20 +65,20 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 		return
 	}
 
-	if err = r.goodsDB.AddProduct(tx, product, encoded); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest)
+	if err = r.goodsDB.AddProduct(tx, product); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Could not add product: " + err.Error()}) //http.StatusBadRequest
 		return
 	}
 
 	var lastProductID string
 	err = tx.QueryRow("SELECT id FROM goods WHERE name = $1 ORDER BY id DESC LIMIT 1", product.Name).Scan(&lastProductID)
 	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve last product ID: " + err.Error()})
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not commit transaction: " + err.Error()})
 		return
 	}
 
@@ -106,7 +90,7 @@ func (r *Server) handlerPostProduct(ctx *gin.Context) {
 // sample link: PUT /api/admin/storageProduct
 
 type PutProductRequest struct {
-	GetAuthMiddleware
+	//GetAuthMiddleware
 	ProductID   string
 	Name        string
 	Description string
@@ -114,14 +98,13 @@ type PutProductRequest struct {
 	Price       int
 	IsUnique    bool
 	Category    string
-	Photo       []byte
+	Photo       string
 }
 
 // sample Request:
 // JSON + Cookie
 //
 //	{
-//		"ExecutorLogin": "Vadim_cvbnqq1",
 //		"ProductID": "4",
 //		"Name": "T-shirt",
 //		"Description": "Very very cool T-shirt",
@@ -143,17 +126,6 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 	if !isAdmin {
 		ctx.AbortWithStatus(http.StatusForbidden)
 		return
-	}
-
-	file, err := os.Open(PhotoLink)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	binaryData, err := io.ReadAll(file)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	tx, err := r.goodsDB.DB.Begin()
@@ -180,7 +152,7 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 		return
 	}
 
-	if err = r.goodsDB.UpdateProduct(tx, product, binaryData); err != nil {
+	if err = r.goodsDB.UpdateProduct(tx, product); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -198,7 +170,7 @@ func (r *Server) handlerPutProduct(ctx *gin.Context) {
 // sample link: DELETE /api/admin/storageProduct
 
 type DeleteProductRequest struct {
-	GetAuthMiddleware
+	//GetAuthMiddleware
 	ProductID string
 }
 
@@ -206,7 +178,6 @@ type DeleteProductRequest struct {
 // JSON + Cookie
 //
 //	{
-//		"ExecutorLogin": "Vadim_cvbnqq1",
 //		"ProductID": "5"
 //	}
 
@@ -253,7 +224,7 @@ func (r *Server) handlerDeleteProduct(ctx *gin.Context) {
 // sample link: PUT /api/admin/addCoins
 
 type ResCoins struct {
-	GetAuthMiddleware
+	//GetAuthMiddleware
 	UserLogin string `json:"userLogin"`
 	Coins     int    `json:"coins"`
 }
@@ -262,7 +233,6 @@ type ResCoins struct {
 // JSON + Cookie
 //
 //	{
-//		"ExecutorLogin": "Vadim_cvbnqq1",
 //		"UserLogin":"Vadim_cvbnqq2",
 //		"Coins":10000
 //	}
@@ -303,3 +273,20 @@ func (r *Server) handlerAddCoins(ctx *gin.Context) {
 		return
 	}
 }
+
+// // // Открытие файла с изображением
+// file, err := os.Open(PhotoLink)
+// if err != nil {
+// 	ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not open image file: " + err.Error()})
+// 	return
+// }
+// defer file.Close()
+
+// // Чтение бинарных данных из файла
+// binaryData, err := io.ReadAll(file)
+// if err != nil {
+// 	ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not read image file: " + err.Error()})
+// 	return
+// }
+// encoded := base64.StdEncoding.EncodeToString(binaryData)
+// product.Photo = encoded

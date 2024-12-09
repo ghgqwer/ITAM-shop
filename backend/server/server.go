@@ -18,24 +18,33 @@ type Server struct {
 	host    string
 	goodsDB *database.GoodsDataBase
 	usersDB *database.UsersDataBase
+	cartDB  *database.CartDataBase
 }
 
-func New(host string, dbGoods *database.GoodsDataBase, dbUsers *database.UsersDataBase) *Server {
+func New(host string, dbGoods *database.GoodsDataBase, dbUsers *database.UsersDataBase, dbCart *database.CartDataBase) *Server { //
 	s := &Server{
 		host:    host,
 		goodsDB: dbGoods,
 		usersDB: dbUsers,
+		cartDB:  dbCart,
 	}
-
 	return s
 }
 
 func (r *Server) newApi() *gin.Engine {
 	engine := gin.New()
 
+	// engine.Use(cors.New(cors.Config{
+	// 	AllowAllOrigins: true,
+	// 	//		AllowOrigins:     []string{"http://localhost:5173"}, // Разрешите доступ для этого источника
+	// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+	// 	ExposeHeaders:    []string{"Content-Length"},
+	// 	AllowCredentials: true,
+	// 	MaxAge:           12 * time.Hour,
+	// }))
 	engine.Use(cors.New(cors.Config{
-		AllowAllOrigins: true,
-		//		AllowOrigins:     []string{"http://localhost:5173"}, // Разрешите доступ для этого источника
+		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -50,7 +59,7 @@ func (r *Server) newApi() *gin.Engine {
 	authUsers := engine.Group("/api", r.authentication()) //, r.authentication()
 	deafultUsers := engine.Group("/api")
 
-	deafultUsers.GET("/product/:ID", r.handlerGetProduct) // sample - /api/product/:ID
+	deafultUsers.GET("/product/:ID", r.handlerGetProduct)
 	deafultUsers.GET("/products", r.handlerGetGoods)
 
 	deafultUsers.POST("/signUp", r.handlerSignUpUser)
@@ -64,6 +73,12 @@ func (r *Server) newApi() *gin.Engine {
 	authUsers.PUT("/admin/storageProduct", r.handlerPutProduct)
 	authUsers.DELETE("/admin/storageProduct", r.handlerDeleteProduct)
 	authUsers.PUT("/admin/addCoins", r.handlerAddCoins)
+
+	//cart
+	authUsers.POST("/addInCart", r.handlerPostCart)
+	authUsers.PUT("/increaseProductCart", r.handlerPutIncreaseCount)
+	authUsers.PUT("/decreaseProductCart", r.handlerPutDecreaseCount)
+	authUsers.GET("/checkCart", r.handlerCheckCart)
 
 	//test endpoint
 	authUsers.GET("/checkCookie", r.handlerCheckCookie)

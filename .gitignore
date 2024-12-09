@@ -5,3 +5,9 @@ username.session.sql
 /backend/.vscode
 /backend/.DS_Store
 /backend/cmd/.DS_Store
+remind
+remind2
+receipt
+ServerDB.session.sql
+myapp
+#git rm --cached <file>
