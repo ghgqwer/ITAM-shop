@@ -66,7 +66,16 @@ func (d *CartDataBase) AddProductInCart(tx *sql.Tx, UserID string, ProductID str
 	return nil
 }
 
-func (d *CartDataBase) InCreaseCountCart(tx *sql.Tx, UserID int, ProductID string) error {
+func (d *CartDataBase) DeleteProductFromCart(tx *sql.Tx, UserID string, ProductID string) error {
+	_, err := tx.Exec(DeleteFromCart, UserID, ProductID)
+	if err != nil {
+		log.Printf("Error delete product from cart: %v", err)
+		return fmt.Errorf("error delete product from cart: %w", err)
+	}
+	return nil
+}
+
+func (d *CartDataBase) InCreaseCountCart(tx *sql.Tx, UserID string, ProductID string) error {
 	if _, err := tx.Exec(IncreaseCount, UserID, ProductID); err != nil {
 		log.Printf("Error add product in cart: %v", err)
 		return fmt.Errorf("error add product in cart: %w", err)
@@ -74,7 +83,7 @@ func (d *CartDataBase) InCreaseCountCart(tx *sql.Tx, UserID int, ProductID strin
 	return nil
 }
 
-func (d *CartDataBase) DecreaseCount(tx *sql.Tx, UserID int, ProductID string) error {
+func (d *CartDataBase) DecreaseCount(tx *sql.Tx, UserID string, ProductID string) error {
 	if _, err := tx.Exec(DecreaseCount, UserID, ProductID); err != nil {
 		log.Printf("Error Increase product in cart: %v", err)
 		return fmt.Errorf("error Increase product in cart: %w", err)

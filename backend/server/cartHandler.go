@@ -76,7 +76,7 @@ func (r *Server) handlerPutIncreaseCount(ctx *gin.Context) {
 		}
 	}()
 
-	if err := r.cartDB.InCreaseCountCart(tx, ctx.GetInt("userID"), putIncreaesCountRequest.ProductID); err != nil {
+	if err := r.cartDB.InCreaseCountCart(tx, ctx.GetString("userID"), putIncreaesCountRequest.ProductID); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -109,7 +109,7 @@ func (r *Server) handlerPutDecreaseCount(ctx *gin.Context) {
 		}
 	}()
 
-	if err := r.cartDB.DecreaseCount(tx, ctx.GetInt("userID"), putDecreaesCountRequest.ProductID); err != nil {
+	if err := r.cartDB.DecreaseCount(tx, ctx.GetString("userID"), putDecreaesCountRequest.ProductID); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -122,9 +122,60 @@ func (r *Server) handlerPutDecreaseCount(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
+type DeleteProductFromCartRequest struct {
+	ProductID string `json:"productID"`
+}
+
+func (r *Server) handlerDeteleProductFromCart(ctx *gin.Context) {
+	var productID DeleteProductFromCartRequest
+
+	if err := json.NewDecoder(ctx.Request.Body).Decode(&productID); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	if productID.ProductID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "ProductID is required"})
+		return
+	}
+
+	tx, err := r.cartDB.DB.Begin()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
+
+	userId := ctx.GetString("userID")
+	if userId == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "UserID is required"})
+		return
+	}
+
+	log.Printf("Trying to delete product with ID: %s for user: %s", productID.ProductID, userId)
+
+	if err := r.cartDB.DeleteProductFromCart(tx, userId, productID.ProductID); err != nil {
+		log.Printf("Error deleting product from cart: %v", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete product from cart"})
+		return
+	}
+
+	if err = tx.Commit(); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
+}
+
 func (r *Server) handlerCheckCart(ctx *gin.Context) {
 	userId := ctx.GetString("userID")
-	log.Printf("%d", userId)
 	// Запрашиваем товары в корзине текущего пользователя
 	rows, err := r.cartDB.DB.Query(database.GetCartItems, userId)
 	if err != nil {

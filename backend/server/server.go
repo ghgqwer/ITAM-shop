@@ -78,6 +78,7 @@ func (r *Server) newApi() *gin.Engine {
 	authUsers.PUT("/increaseProductCart", r.handlerPutIncreaseCount)
 	authUsers.PUT("/decreaseProductCart", r.handlerPutDecreaseCount)
 	authUsers.GET("/checkCart", r.handlerCheckCart)
+	authUsers.DELETE("/deleteFromCart", r.handlerDeteleProductFromCart)
 
 	//test endpoint
 	authUsers.GET("/checkCookie", r.handlerCheckCookie)
