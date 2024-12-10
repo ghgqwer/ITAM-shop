@@ -10,5 +10,5 @@ remind2
 receipt
 ServerDB.session.sql
 myapp
-package-lock.json
+#package-lock.json
 #git rm --cached <file>
