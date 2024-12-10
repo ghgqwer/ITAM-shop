@@ -261,7 +261,7 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 		HttpOnly: false,
 		Path:     "/",
 		SameSite: http.SameSiteNoneMode,
-		Secure:   false,
+		Secure:   true,
 	}
 	http.SetCookie(ctx.Writer, &cookie)
 
