@@ -260,6 +260,8 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 		Expires:  expirationTime,
 		HttpOnly: false,
 		Path:     "/",
+		SameSite: http.SameSiteNoneMode,
+		Secure:   false,
 	}
 	http.SetCookie(ctx.Writer, &cookie)
 
