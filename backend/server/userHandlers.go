@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -55,21 +54,22 @@ func (r *Server) authentication() gin.HandlerFunc {
 
 		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
-		cookieAccessKey, err := ctx.Cookie(uniqueCookieKeyName) //cookie
-		if err != nil {
-			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (cookies doesnt exist)"})
+		// cookieAccessKey, err := ctx.Cookie(uniqueCookieKeyName) //cookie
+		// if err != nil {
+		// 	ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Not logged in (cookies doesnt exist)"})
+		// 	ctx.AbortWithStatus(http.StatusUnauthorized)
+		// 	return
+		// }
+
+		authHeader := ctx.GetHeader("Authorization")
+		if authHeader == "" {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
-		// cookieAccessKey, err := pkg.Decrypt(encryptCookieAccessToken, EncryptCookieKey)
-		// if err != nil || len(cookieAccessKey) == 0 {
-		// 	ctx.AbortWithStatus(http.StatusInternalServerError)
-		// 	return
-		// }
-
 		var infoDB InfoDB
-		err = r.usersDB.DB.QueryRow("SELECT id, login, isAdmin FROM users WHERE acсessToken = $1", cookieAccessKey).Scan(&infoDB.UserID, &infoDB.ExecutorLogin, &infoDB.IsAdmin)
+		err = r.usersDB.DB.QueryRow("SELECT id, login, isAdmin FROM users WHERE acсessToken = $1", authHeader).Scan(&infoDB.UserID, &infoDB.ExecutorLogin, &infoDB.IsAdmin)
 		if err != nil {
 			log.Printf("Error retrieving access token: %v", err)
 			ctx.AbortWithStatus(http.StatusBadRequest)
@@ -248,33 +248,34 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 		}
 	}()
 
-	if _, err := tx.Exec("UPDATE users SET acсessToken = $1 WHERE login = $2", accessToken, postLoginRequest.Login); err != nil {
+	if _, err := tx.Exec("UPDATE users SET acсessToken = $1 WHERE login = $2 AND (acсessToken IS NULL OR acсessToken = '')", accessToken, postLoginRequest.Login); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	expirationTime := time.Now().Add(24 * time.Hour)
-	cookie := http.Cookie{
-		Name:     uniqueCookieKeyName, //postLoginRequest.Login
-		Value:    accessToken,         //EncryptСookieAccessToken
-		Expires:  expirationTime,
-		HttpOnly: false,
-		Path:     "/",
-		SameSite: http.SameSiteNoneMode,
-		Secure:   true,
-	}
-	http.SetCookie(ctx.Writer, &cookie)
+	// expirationTime := time.Now().Add(24 * time.Hour)
+	// cookie := http.Cookie{
+	// 	Name:     uniqueCookieKeyName, //postLoginRequest.Login
+	// 	Value:    accessToken,         //EncryptСookieAccessToken
+	// 	Expires:  expirationTime,
+	// 	HttpOnly: false,
+	// 	Path:     "/",
+	// 	// SameSite: http.SameSiteNoneMode,
+	// 	// Secure:   true,
+	// }
+	// http.SetCookie(ctx.Writer, &cookie)
 
 	if err = tx.Commit(); err != nil {
 		ctx.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"message":  "User logged in successfully.",
-		"username": cookie.Name,
-		"isAdmin":  ctx.GetBool("isAdmin"),
-	})
+	ctx.Status(http.StatusOK)
+	// ctx.JSON(http.StatusOK, gin.H{
+	// 	"message":  "User logged in successfully.",
+	// 	"username": cookie.Name,
+	// 	"isAdmin":  ctx.GetBool("isAdmin"),
+	// })
 }
 
 // Обновить данные пользователя
