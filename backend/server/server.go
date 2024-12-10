@@ -1,6 +1,5 @@
 package server
 
-//127.0.0.1
 import (
 	"backend/internal/database"
 	"time"
@@ -11,7 +10,6 @@ import (
 
 const (
 	PhotoLink = "./images/sampleTshirt.jpg"
-	//PhotoLink = "../images/sampleTshirt.jpg"
 )
 
 type Server struct {
@@ -44,7 +42,7 @@ func (r *Server) newApi() *gin.Engine {
 	// 	MaxAge:           12 * time.Hour,
 	// }))
 	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -62,11 +60,12 @@ func (r *Server) newApi() *gin.Engine {
 	deafultUsers.GET("/product/:ID", r.handlerGetProduct)
 	deafultUsers.GET("/products", r.handlerGetGoods)
 
+	//user
 	deafultUsers.POST("/signUp", r.handlerSignUpUser)
 	deafultUsers.POST("/login", r.handlerLoginUser)
-
 	authUsers.PUT("/updateUser", r.handlerUpdateUser)
 	authUsers.PUT("/basket/buy", r.handlerBuyBasket)
+	deafultUsers.GET("/getBalance/:login", r.handlerGetBalance)
 
 	//admin
 	authUsers.POST("/admin/storageProduct", r.handlerPostProduct)

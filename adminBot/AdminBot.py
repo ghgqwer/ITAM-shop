@@ -97,5 +97,27 @@ async def add_coins(message: types.Message, state: FSMContext):
             await bot.send_message(message.from_user.id, "Failed to add coins.")
         await state.finish()
 
+
+class FSMBalance(StatesGroup):
+    EnterUserLogin = State()
+@dp.message_handler(commands=['getbalance'])
+async def get_balance(message: types.Message):    
+    await message.reply("Enter user login:")
+    await FSMBalance.EnterUserLogin.set()  
+
+@dp.message_handler(state=FSMBalance.EnterUserLogin)
+async def process_user_login_for_balance(message: types.Message, state: FSMContext):
+    user_login = message.text
+
+    response = requests.get(f"http://89.111.154.197:8080/api/getBalance/{user_login}")
+
+    if response.status_code == 200:
+        balance = response.text  
+        await message.reply(f'User login: {user_login}, Balance: {balance}')
+    else:
+        await message.reply("Failed to retrieve balance.")
+
+    await state.finish() 
+
 if __name__ == '__main__':
     executor.start_polling(dp, skip_updates=True)

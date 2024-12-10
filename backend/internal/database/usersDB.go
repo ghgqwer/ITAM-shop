@@ -31,6 +31,8 @@ const (
 	addCoins = `UPDATE users SET wallet = wallet + $1 WHERE id = $2`
 
 	addCoinsByLogin = `UPDATE users SET wallet = wallet + $1 WHERE login = $2`
+
+	GetUserBalance = `SELECT wallet FROM users WHERE login = $1;`
 )
 
 type UsersDataBase struct {
@@ -93,6 +95,13 @@ func (d *UsersDataBase) AddCoins(tx *sql.Tx, coins int, id string) error {
 
 func (d *UsersDataBase) AddCoinsByLogin(tx *sql.Tx, coins int, login string) error {
 	if _, err := tx.Exec(addCoinsByLogin, coins, login); err != nil {
+		return fmt.Errorf("coins dont add: %w", err)
+	}
+	return nil
+}
+
+func (d *UsersDataBase) CheckUserBalance(login string) error {
+	if _, err := d.DB.Exec(GetUserBalance, login); err != nil {
 		return fmt.Errorf("coins dont add: %w", err)
 	}
 	return nil

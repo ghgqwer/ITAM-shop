@@ -1,0 +1,14 @@
+services:
+  server:
+    image: testbackbuild
+    container_name: docker-server
+    ports:
+      - "8080:8080" 
+  frontend:
+    depends_on:
+      - server
+    image: testbuildfront
+    container_name: docker-front
+    ports:
+      - "3000:3000"
+

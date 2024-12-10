@@ -274,6 +274,19 @@ func (r *Server) handlerAddCoins(ctx *gin.Context) {
 	}
 }
 
+func (r *Server) handlerGetBalance(ctx *gin.Context) {
+	login := ctx.Param("login")
+
+	var balance int
+
+	if err := r.usersDB.DB.QueryRow(database.GetUserBalance, login).Scan(&balance); err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, balance)
+}
+
 // // // Открытие файла с изображением
 // file, err := os.Open(PhotoLink)
 // if err != nil {
