@@ -154,24 +154,21 @@ func (r *Server) handlerCheckCart(ctx *gin.Context) {
 		cartItems = append(cartItems, item)
 	}
 
-	// Проверка на наличие ошибок после завершения итерации
 	if err := rows.Err(); err != nil {
 		log.Printf("Error during row iteration: %v", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching cart items"})
 		return
 	}
 
-	// Теперь необходимо получить информацию о каждом товаре по его ProductID
 	var products []database.Product
 	for _, cartItem := range cartItems {
 		product, err := r.goodsDB.GetProduct(cartItem.ProductID)
 		if err != nil {
 			log.Printf("Error retrieving product with ID %s: %v", cartItem.ProductID, err)
-			continue // Игнорируем продукт, если он не найден
+			continue
 		}
 
-		// Добавляем детали продукта в ответ
-		product.Count = cartItem.Count // Устанавливаем количество товара из корзины
+		product.Count = cartItem.Count
 		products = append(products, product)
 	}
 
