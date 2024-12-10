@@ -1,0 +1,17 @@
+services:
+  frontend:
+    image: testbuildfront
+    container_name: docker-front
+    ports:
+      - "3000:3000" 
+    # environment:
+    #   BASIC_SERVER_PORT: 8090
+    #   POSTGRES: "postgresql://username:password@postgres:5432/core?sslmode=disable"
+    #   TIMELOOP: 5
+    # volumes:
+    #   - result_app:/data
+
+# volumes:
+#   postgres:
+#   result_app:
+
