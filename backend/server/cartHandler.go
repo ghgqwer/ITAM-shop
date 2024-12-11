@@ -176,7 +176,6 @@ func (r *Server) handlerDeteleProductFromCart(ctx *gin.Context) {
 
 func (r *Server) handlerCheckCart(ctx *gin.Context) {
 	userId := ctx.GetString("userID")
-	// Запрашиваем товары в корзине текущего пользователя
 	rows, err := r.cartDB.DB.Query(database.GetCartItems, userId)
 	if err != nil {
 		log.Printf("Error retrieving cart items: %v", err)
@@ -185,13 +184,11 @@ func (r *Server) handlerCheckCart(ctx *gin.Context) {
 	}
 	defer rows.Close()
 
-	// Массив для хранения товаров в корзине
 	var cartItems []struct {
 		ProductID string `json:"product_id"`
 		Count     int    `json:"count"`
 	}
 
-	// Перебираем результаты и добавляем их в массив
 	for rows.Next() {
 		var item struct {
 			ProductID string `json:"product_id"`
@@ -223,6 +220,5 @@ func (r *Server) handlerCheckCart(ctx *gin.Context) {
 		products = append(products, product)
 	}
 
-	// Возвращаем информацию о товарах в корзине
 	ctx.JSON(http.StatusOK, products)
 }
