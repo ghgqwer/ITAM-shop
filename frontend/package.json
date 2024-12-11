@@ -24,8 +24,7 @@
 		"sveltekit-superforms": "^2.20.1",
 		"typescript": "^5.0.0",
 		"vite": "^5.0.3",
-		"zod": "^3.23.8",
-		"uuid": "^8.3.2"
+		"zod": "^3.23.8"
 	},
 	"type": "module",
 	"dependencies": {
