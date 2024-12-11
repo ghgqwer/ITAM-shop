@@ -20,22 +20,8 @@
 	function profile() {
 		window.location.href = "/Exict";
 	}
-	let currentIndex = 0;
-	let images = "/image.png";
-	function next() {
-		if (currentIndex < images.length - 1) {
-			currentIndex += 1;
-		} else {
-			currentIndex = 0;
-		}
-	}
-	function prev() {
-		if (currentIndex > 0) {
-			currentIndex -= 1;
-		} else {
-			currentIndex = images.length - 1;
-		}
-	}
+	
+	
 	
 	let good: GoodType | undefined;
 	
@@ -81,6 +67,12 @@
 	function backToCatalog(){
 		goto(`/Catalog`);
 	}
+	let unic="";
+	if(good?.IsUnique){
+		unic="единоразовая покупка"
+	} else{
+		unic="множественная покупка"
+	}
 </script>
 
 <div class="header">
@@ -117,12 +109,7 @@
 		<img src="/backToMain.svg" alt="" />
 	</button>
 	<div class="pictures">
-		<button class="btn" on:click={prev}>
-			<img class="back" src="/backPicture.svg" alt="" />
-		</button>
-		<button class="btn" on:click={next}>
-			<img class="forward" src="/backPicture.svg" alt="" />
-		</button>
+		
 		<img class="photoes" src={`data:image/jpg;base64,${good?.Photo}`} alt="" />
 	</div>
 	<div class="information">
@@ -147,7 +134,7 @@
 		</div>
 		<div class="isUnic">
 			<div class="grTextU">Уникальность...............................</div>
-			<div class="Answer">{good?.IsUnique}</div>
+			<div class="Answer">{unic}</div>
 		</div>
 		<button class="inBasket" on:click={putInBasket}>
 			<div class="txtInBasket">В корзину</div>
@@ -181,7 +168,7 @@
 <style lang="scss">
 	.header {
 		display: flex;
-		width: 1600px;
+		width: 1500px;
 		height: 100px;
 		border-bottom: 1px solid;
 		padding: 20px 50px;
@@ -342,7 +329,7 @@
 			.coins {
 				display: flex;
 				align-items: center;
-				width: 141px;
+				width: 90px;
 				height: 50px;
 				border-radius: 10px;
 				padding-top: 2px;
@@ -426,7 +413,7 @@ animation-duration: 300ms;
 		display: flex;
 		position: absolute;
 		margin-top: 200px;
-		width: 1600px;
+		width: 1500px;
 		height: 150px;
 		top: 874px;
 		padding: 25px 50px 25px 50px;

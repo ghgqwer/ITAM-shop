@@ -2,9 +2,11 @@
 	import { goto } from "$app/navigation";
 	import { onMount } from "svelte";
 	import { writable } from "svelte/store";
+	import { string } from "zod";
 	let quantities = writable<Record<string, number>>({});
-	let totalAmount=writable(0);
-	let totalCount=writable(0);
+	let totalAmount = writable(0);
+	let totalCount = writable(0);
+	let buyingGoods = writable<BuyType[]>([]);
 	let token: string =
 		"P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA=";
 	async function loadGoodsToBasket(event: Event): Promise<GoodType[]> {
@@ -14,18 +16,16 @@
 				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
-					"Authorization": token
+					Authorization: token
 				},
 				credentials: "include"
 			});
 			if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
 			const goods: GoodType[] = await response.json(); // Предполагаем, что ответ - это массив GoodType
-			console.log("Наши товары:", goods)
+			console.log("Наши товары:", goods);
 			return goods;
-			
-			
 		} catch (error) {
 			console.log("Ошибка при выводе товаров в корзину:", error);
 			return [];
@@ -36,29 +36,40 @@
 	onMount(async () => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 		const goods = await loadGoodsToBasket(new Event("load"));
-        basketGoods.set(goods);
-        quantities.set(Object.fromEntries(goods.map(good => [good.ProductID, 1])));
-
+		basketGoods.set(goods);
+		quantities.set(Object.fromEntries(goods.map(good => [good.ProductID, 1])));
 	});
-	function updateTotal(){
-		basketGoods.subscribe(goods=>{
-			const quantityData=$quantities;
-			const total=goods.reduce((acc,good)=>{
-				const quantity=quantityData[good.ProductID]||1;
-				return acc + (good.Price*quantity);
-			},0);
+	function updateTotal() {
+		basketGoods.subscribe(goods => {
+			const quantityData = $quantities;
+			const total = goods.reduce((acc, good) => {
+				const quantity = quantityData[good.ProductID] || 1;
+				return acc + good.Price * quantity;
+			}, 0);
 			totalAmount.set(total);
-			const count = Object.values(quantityData).reduce((sum,qty)=>sum+qty,0);
+			const count = Object.values(quantityData).reduce((sum, qty) => sum + qty, 0);
 			totalCount.set(count);
 		})();
-		
 	}
-	quantities.subscribe(()=>{
-			updateTotal();
-		});
-	basketGoods.subscribe(()=>{
-			updateTotal();
-		});
+	function updateBuyingGoods() {
+		basketGoods.subscribe(goods => {
+			quantities.subscribe(q => {
+				const updatedGoods = goods.map(good => ({
+					ProductID: good.ProductID,
+					Count: q[good.ProductID] || 1 // Получаем количество из quantities, или 1 по умолчанию
+				}));
+				buyingGoods.set(updatedGoods);
+			});
+		})();
+	}
+	quantities.subscribe(() => {
+		updateTotal();
+		updateBuyingGoods();
+	});
+	basketGoods.subscribe(() => {
+		updateTotal();
+		updateBuyingGoods();
+	});
 	interface GoodType {
 		Name: string;
 		Description: string;
@@ -72,93 +83,130 @@
 	function profile() {
 		window.location.href = "/Exict";
 	}
-	
 
 	function forGoods() {
 		goto(`/Catalog`);
 	}
-	async function deleteGoodFromBasket(good:GoodType){
-		try{
-			let response= await fetch("http://89.111.154.197:8080/api/deleteFromCart",{
-			method:"DELETE",
-			headers: {
-					"Content-Type": "application/json",
-					"Authorization": token
-				},
-			body:JSON.stringify({
-				ProductID:good.ProductID
-			})
-
-		});
-		basketGoods.update(currentGoods => {
-                const updatedGoods = currentGoods.filter(item => item.ProductID !== good.ProductID);
-                return updatedGoods; // Возвращаем обновленный массив товаров
-            });
-			quantities.update(q => {
-                const { [good.ProductID]: removed, ...rest } = q;
-                return rest; // Удаляем количество товара
-            });
-
-
-
-		}catch(error){
-			console.log("Ошибка при удалении товара:", error)
-		}
-	} 
-
-	
-
-
-
-	async function updateGoodAmount(productID: string, action: 'increase' | 'decrease') {
-        quantities.update(currentQuantities => {
-            const currentAmount = currentQuantities[productID] || 1;
-
-            if (action === 'increase') {
-                if (currentAmount < 10) { // Здесь вы можете установить максимальное количество
-                    currentQuantities[productID] = currentAmount + 1;
-                }
-            } else if (action === 'decrease') {
-                if (currentAmount > 1) {
-                    currentQuantities[productID] = currentAmount - 1;
-                }
-            }
-			return { ...currentQuantities }; // Возвращаем обновленный объект количества
-        });
+	async function deleteGoodFromBasket(good: GoodType) {
 		try {
-            const response = await fetch(action === 'increase' 
-                ? "http://89.111.154.197:8080/api/increaseProductCart" 
-                : "http://89.111.154.197:8080/api/decreaseProductCart", {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": token
-                },
-                body: JSON.stringify({ ProductID: productID })
-            });
-            if (!response.ok) {
-                // Если произошла ошибка, можно отменить локальное обновление
-                throw new Error(`Ошибка на сервере: ${response.status}`);
-            }
-        } catch (error) {
-            console.log("Ошибка при изменении количества товара на сервере:", error);
-            // Возврат к предыдущему количеству, если произошла ошибка на сервере (опционально)
-            quantities.update(currentQuantities => {
-                const currentAmount = currentQuantities[productID] || 1;
-                if (action === 'increase') {
-                    currentQuantities[productID] = currentAmount - 1; // Уменьшаем обратно
-                } else if (action === 'decrease') {
-                    currentQuantities[productID] = currentAmount + 1; // Увеличиваем обратно
-                }
-                return { ...currentQuantities };
-            });
+			let response = await fetch("http://89.111.154.197:8080/api/deleteFromCart", {
+				method: "DELETE",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: token
+				},
+				body: JSON.stringify({
+					ProductID: good.ProductID
+				})
+			});
+			basketGoods.update(currentGoods => {
+				const updatedGoods = currentGoods.filter(item => item.ProductID !== good.ProductID);
+				return updatedGoods; // Возвращаем обновленный массив товаров
+			});
+			quantities.update(q => {
+				const { [good.ProductID]: removed, ...rest } = q;
+				return rest; // Удаляем количество товара
+			});
+		} catch (error) {
+			console.log("Ошибка при удалении товара:", error);
+		}
+	}
+
+	async function updateGoodAmount(productID: string, action: "increase" | "decrease") {
+		quantities.update(currentQuantities => {
+			const currentAmount = currentQuantities[productID] || 1;
+
+			if (action === "increase") {
+				if (currentAmount < 10) {
+					// Здесь вы можете установить максимальное количество
+					currentQuantities[productID] = currentAmount + 1;
+				}
+			} else if (action === "decrease") {
+				if (currentAmount > 1) {
+					currentQuantities[productID] = currentAmount - 1;
+				}
+			}
+			return { ...currentQuantities }; // Возвращаем обновленный объект количества
+		});
+		try {
+			const response = await fetch(
+				action === "increase"
+					? "http://89.111.154.197:8080/api/increaseProductCart"
+					: "http://89.111.154.197:8080/api/decreaseProductCart",
+				{
+					method: "PUT",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: token
+					},
+					body: JSON.stringify({ ProductID: productID })
+				}
+			);
+			if (!response.ok) {
+				// Если произошла ошибка, можно отменить локальное обновление
+				throw new Error(`Ошибка на сервере: ${response.status}`);
+			}
+		} catch (error) {
+			console.log("Ошибка при изменении количества товара на сервере:", error);
+			// Возврат к предыдущему количеству, если произошла ошибка на сервере (опционально)
+			quantities.update(currentQuantities => {
+				const currentAmount = currentQuantities[productID] || 1;
+				if (action === "increase") {
+					currentQuantities[productID] = currentAmount - 1; // Уменьшаем обратно
+				} else if (action === "decrease") {
+					currentQuantities[productID] = currentAmount + 1; // Увеличиваем обратно
+				}
+				return { ...currentQuantities };
+			});
+		}
+	}
+	interface BuyType {
+		ProductID: string;
+		Count: number;
+	}
+
+	async function buyGoods() {
+		try{
+			
+			let goodsToBuy: BuyType[] = $buyingGoods.map((item: any) => ({
+            ProductID: item.ProductID,
+            Count: Number(item.Count) // Здесь мы явно приводим к числу
+        }));
+
+
+		let response = await fetch("http://89.111.154.197:8080/api/basket/buy", {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: token
+			},
+			body: JSON.stringify({ 
+				Items: [
+        {
+            "ProductID": "94a7d7e4-dd58-4023-8c1c-0424306d1ccb",
+            "Count": Number(1)
         }
-
-
-    }
-
+    ]
+			 })
+		});
+		if (!response.ok) {
+				// Если произошла ошибка, можно отменить локальное обновление
+				
+		
+				throw new Error(`Ошибка на сервере при покупке: ${response.status}`);
+				
+			}
+			const obj = await response.json();
+			console.log(obj);
 		
 
+		} catch(error){
+			console.log("Ошибка при покупке:", error)
+			
+		}
+		
+		
+	}
 </script>
 
 <div class="header">
@@ -211,27 +259,31 @@
 					<div class="nameGood">{good.Name}</div>
 					<div class="left">Осталось {good.Count} шт</div>
 					<div class="changeAmount">
-						<button class="minus" on:click={() => updateGoodAmount(good.ProductID, 'decrease')}>
+						<button class="minus" on:click={() => updateGoodAmount(good.ProductID, "decrease")}>
 							<img src="/minus.png" alt="" />
 						</button>
 						<div class="txtA">{$quantities[good.ProductID] || 1}</div>
-						<button class="plus" on:click={() => updateGoodAmount(good.ProductID, 'increase') }>
+						<button class="plus" on:click={() => updateGoodAmount(good.ProductID, "increase")}>
 							<img src="/icon-plus.svg" alt="" />
 						</button>
 					</div>
 				</div>
 				<div class="cost">
 					<div class="priceGood">{good.Price} коинов</div>
-					
 				</div>
-				<button class="delete" on:click={()=>{deleteGoodFromBasket(good)}}>
+				<button
+					class="delete"
+					on:click={() => {
+						deleteGoodFromBasket(good);
+					}}
+				>
 					<img src="/delete.svg" alt="" />
 				</button>
 			</div>
 		{/each}
 	</div>
 	<div class="buying">
-		<button class="ordering">
+		<button class="ordering" on:click={()=>{buyGoods()}}>
 			<div class="txtO">заказать</div>
 		</button>
 		<div class="buyingInfo">
@@ -298,7 +350,7 @@
 <style lang="scss">
 	.header {
 		display: flex;
-		width: 1600px;
+		width: 1500px;
 		height: 100px;
 		border-bottom: 1px solid;
 		padding: 20px 50px;
@@ -467,7 +519,6 @@
 					color: rgba(255, 255, 255, 1);
 				}
 				.left {
-					
 					width: 248px;
 					height: 25px;
 					gap: 0px;
@@ -552,7 +603,6 @@
 					-webkit-background-clip: text;
 					color: transparent;
 				}
-				
 			}
 			.delete {
 				width: 40px;
@@ -779,7 +829,7 @@
 	footer {
 		display: flex;
 		position: absolute;
-		width: 1600px;
+		width: 1500px;
 		height: 150px;
 		top: 874px;
 		padding: 25px 50px 25px 50px;

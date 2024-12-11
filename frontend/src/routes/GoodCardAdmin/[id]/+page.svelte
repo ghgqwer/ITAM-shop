@@ -5,7 +5,7 @@
 	onMount(() => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 	});
-	let currentIndex = 0;
+	
 	import {loadGood } from "./logic";
 	export let data;
 	interface GoodType {
@@ -44,6 +44,7 @@
 			countInput = good.Count;
 			priceInput = good.Price;
 			isUnicInput = good.IsUnique;
+			categoryInput=good.Category;
 			img = good.Photo;
 			console.log(good);
 		} 
@@ -55,7 +56,7 @@
 	let countInput: number = 5;
 	let priceInput: number = 10;
 	let isUnicInput: boolean = true;
-	let categoryInput = "";
+	let categoryInput = "Одежда";
 	
 	function handlePurchaseTypeChange(event: Event) {
 		const selectElement = event.target as HTMLSelectElement;
@@ -73,6 +74,7 @@
 			good.Description=descriptionInput;
 			good.Count=countInput;
 			good.IsUnique=isUnicInput;
+			good.Category=categoryInput;
 			
 			try {
         const response = await fetch("http://89.111.154.197:8080/api/admin/storageProduct", {
@@ -84,8 +86,8 @@
                 Count: Number(countInput),
                 Price: Number(priceInput),
                 IsUnique: isUnicInput,
-                Category: "",
-				Photo: img
+                Category: categoryInput,
+				Photo: image
 
             }),
             headers: {
@@ -111,7 +113,7 @@
 				Price: priceInput,
 				IsUnique: isUnicInput,
 				Category: categoryInput,
-				Photo: images
+				Photo: image
 			};
 						try {
 							const response = await fetch("http://89.111.154.197:8080/api/admin/storageProduct", {
@@ -123,7 +125,8 @@
 						            Count: Number(updatedGood.Count),
 						            Price: Number(updatedGood.Price),
 						            IsUnique: updatedGood.IsUnique,
-									Photo: img
+									Category:updatedGood.Category,
+									Photo: updatedGood.Photo
 								}),
 								headers: {
                 "Content-Type": "application/json",
@@ -145,58 +148,55 @@
 
 			
 
-	let fileInput: HTMLInputElement | null;
-	let selectedFiles: File[] =[];
-	let uploadStatus: string = "";
-	let currentImageIndex:number=0;
-	let images: string[]=[];
+				let fileInput: HTMLInputElement | null;
+let selectedFiles: File[] = [];
+let uploadStatus: string = "";
+let currentImageIndex: number = 0;
+let image: string = ""; // Изменяем массив на отдельную строковую переменную
 
-	function openFileDialog(): void {
-		if (fileInput) {
-			fileInput.click();
-		}
-	}
-	
+function openFileDialog(): void {
+    if (fileInput) {
+        fileInput.click();
+    }
+}
 
-	async function handleFileChange(event: Event): void {
-		const target = event.target as HTMLInputElement;
-		const files = target.files;
-		
-		if (files && files.length > 0) {
-			selectedFiles = Array.from(files);
+async function handleFileChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const files = target.files;
 
+    if (files && files.length > 0) {
+        // Очищаем предыдущие выбранные файлы
+        selectedFiles = [];
 
-			
-			
-			for (const file of Array.from(files)) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64String = reader.result as string;
-				console.log("Добавлено изображение:", base64String);
-
-                images.push(base64String.split(",")[1]);
-                // Если это первое изображение, покажем его сразу
-                if (images.length === 1) {
-                    currentImageIndex = 0;
-                }
-            };
-            reader.readAsDataURL(file);
+        // Проверяем, что выбран только один файл
+        if (files.length > 1) {
+            uploadStatus = "Пожалуйста, загрузите только одно изображение.";
+            return;
+        } else {
+            selectedFiles.push(files[0]); // Добавляем только один файл
         }
+
+        const file = selectedFiles[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const base64String = reader.result as string;
+            console.log("Добавлено изображение:", base64String);
+
+            image = base64String.split(",")[1]; // Сохраняем изображение в переменной
+            currentImageIndex = 0; // Указываем индекс первого изображения (хотя это может быть не нужно)
+            uploadStatus = "Изображение загружено."; // Например, вы можете менять статус загрузки
+        };
+        reader.readAsDataURL(file); // Читаем файл как Data URL
+    }
+}
+function backTM(){
+		goto(`/AdminCatalog`)
 	}
-	}
+
 
 	
-	function nextImage(): void {
-    if (images.length > 1) {
-        currentImageIndex = (currentImageIndex + 1) % images.length; // Переход к следующему изображению
-    }
-}
-
-function previousImage(): void {
-    if (images.length > 1) {
-        currentImageIndex = (currentImageIndex - 1 + images.length) % images.length; // Переход к предыдущему изображению
-    }
-}
+	
+    
 </script>
 
 <div class="header">
@@ -223,26 +223,21 @@ function previousImage(): void {
 </div>
 
 <div class="body">
-	<button class="backToMain">
+	<button class="backToMain" on:click={()=>{backTM()}}>
 		<img src="/backToMain.svg" alt="" />
 	</button>
-	<button class="btn" on:click={previousImage}>
-        <img class="back" src="/backPicture.svg" alt="Back" />
-    </button>
-    <button class="btn" on:click={nextImage}>
-        <img class="forward" src="/backPicture.svg" alt="Forward" />
-    </button>
-
+	
+	
 	<div class="pictures">
 		<button class="newImage" on:click={openFileDialog}>Добавить фото</button>
 		<input type="file" bind:this={fileInput} on:change={handleFileChange} class="hidden" multiple style="display:none;" />
-		{#if images.length > 0}
-            <img class="photoes" src={`data:image/jpg;base64,${images[currentImageIndex]}`} alt="" />
+	
+		{#if image !== ""} <!-- Проверяем, есть ли загруженная картинка -->
+			<img class="photoes" src={`data:image/jpg;base64,${image}`} alt="" />
 		{:else}
-		<img class="photoes" src={`data:image/jpg;base64,${img}`} alt="" />
-        {/if}
+		    <img class="photoes" src={`data:image/jpg;base64,${img}`} alt="" /><!-- Отображаем общее сообщение об отсутствии изображения -->
+		{/if}
 	</div>
-
 	<div class="information">
 		<div class="name">
 			<div class="txtN">Название:</div>
@@ -276,6 +271,18 @@ function previousImage(): void {
 					<option value="multiple" selected={isUnicInput}>Множественная покупка</option>
 				</select>
 			</div>
+		</div>
+		<div class="category">
+			<div class="txtCat">Категория:</div>
+			
+				<select bind:value={categoryInput}>
+					<option value="Одежда">Одежда</option>
+					<option value="Аксессуары">Аксессуары</option>
+					<option value="Канцелярия">Канцелярия</option>
+					<option value="Другое">Другое</option>
+					
+				</select>
+			
 		</div>
 
 		<button
@@ -314,7 +321,7 @@ function previousImage(): void {
 <style lang="scss">
 	.header {
 		display: flex;
-		width: 1600px;
+		width: 1410px;
 		height: 100px;
 		border-bottom: 1px solid;
 		padding: 20px 50px;
@@ -391,9 +398,9 @@ function previousImage(): void {
 			width: 30px;
 			height: 30px;
 			position: absolute;
-			margin-left: 10px;
+			margin-left: 35px;
 			transform: translateY(-50%);
-			top: 500px;
+			top: 540px;
 			left: 125px;
 			z-index: 1;
 		}
@@ -409,8 +416,8 @@ function previousImage(): void {
 			border: none;
 			padding: 0px;
 			z-index: 1;
-			top: 487px;
-			left: 540px;
+			top: 525px;
+			left: 560px;
 		}
 		.pictures {
 			width: 460px;
@@ -590,6 +597,37 @@ function previousImage(): void {
 					padding-left: 10px;
 				}
 			}
+			.category {
+				width: 500px;
+				height: 66px;
+				gap: 0px;
+				opacity: 0px;
+				.txtCat {
+					width: 500px;
+					height: 25px;
+					gap: 0px;
+					opacity: 0px;
+					//styleName: body text;
+					font-family: Montserrat;
+					font-size: 16px;
+					font-weight: 400;
+					line-height: 24.82px;
+					text-align: left;
+					text-underline-position: from-font;
+					text-decoration-skip-ink: none;
+					color: grey;
+				}
+				select {
+					border-radius: 10px;
+					border: 1px;
+					width: 510px;
+					height: 40px;
+					gap: 28px;
+					opacity: 0px;
+					padding-left: 10px;
+				}
+			}
+		
 		}
 		.saveChanges {
 			width: 330px;

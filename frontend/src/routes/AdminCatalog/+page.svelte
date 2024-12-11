@@ -2,20 +2,20 @@
 	import { page } from "$app/stores";
 	let slug = $page.params.slug;
 	import { onMount } from "svelte";
-	let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
+	let token: string =
+		"P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA=";
 
-	import { allGoods,goods } from "../GoodCardAdmin/[id]/logic";
+	import { allGoods, goods } from "../GoodCardAdmin/[id]/logic";
 	import { loadGoods, createGood, DeleteGoodById } from "../GoodCardAdmin/[id]/logic";
 
 	import { goto } from "$app/navigation";
-	
+
 	onMount(async () => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 
 		// Загрузка товаров при монтировании компонента
-		const goods:GoodType[] = await loadGoods();
+		const goods: GoodType[] = await loadGoods();
 		allGoods.set(goods); // Обновляем хранилище с загруженными товарами
-		
 	});
 	function profile() {
 		window.location.href = "/Exict";
@@ -37,7 +37,27 @@
 	async function NewGood() {
 		goto(`/GoodCardAdmin/new`);
 	}
-	let sortOption="default";
+
+	let selectedCategory: string = "";
+	let selectedSort: string = ""; // Для сортировки: "asc" — сначала дешевле, "desc" — сначала дороже
+	let categories = ["Одежда", "Аксессуары", "Канцелярия", "Другое"]; // Пример категорий
+
+	$: filteredGoods = (() => {
+		let goodsArray = $allGoods;
+
+		// Фильтрация по категории
+		if (selectedCategory) {
+			goodsArray = goodsArray.filter(good => good.Category === selectedCategory);
+		}
+
+		// Сортировка
+		goodsArray.sort((a, b) => {
+			return selectedSort === "asc" ? a.Price - b.Price : b.Price - a.Price;
+		});
+
+		return goodsArray;
+	})();
+	
 	
 </script>
 
@@ -71,9 +91,25 @@
 		</div>
 		<div class="selectors">
 			<div class="priceSelectors">
-
+				<select id="sortSelect" bind:value={selectedSort}>
+					<option value="" disabled selected>Сначала дороже</option>
+					<!-- Placeholder -->
+					<option value="asc">Сначала дешевле</option>
+					<option value="desc">Сначала дороже</option>
+				</select>
+			</div>
+			<div class="CategorySelectors">
+				<select id="categorySelect" bind:value={selectedCategory}>
+					<option value="" disabled selected>Категория</option>
+					<!-- Placeholder -->
+					<option value="">Все товары</option>
+					{#each categories as category}
+						<option value={category}>{category}</option>
+					{/each}
+				</select>
 			</div>
 		</div>
+
 		<button
 			class="AddGood"
 			on:click={() => {
@@ -84,7 +120,7 @@
 		</button>
 	</div>
 	<div class="body">
-		{#each $allGoods as good}
+		{#each filteredGoods as good}
 			<div class="good">
 				<img class="image" src={`data:image/jpg;base64,${good.Photo}`} alt="" />
 				<div class="description">
@@ -174,7 +210,7 @@
 <style lang="scss">
 	.header {
 		display: flex;
-		width: 1600px;
+		width: 1520px;
 		height: 100px;
 		border-bottom: 1px solid;
 		padding: 20px 50px;
@@ -265,13 +301,80 @@
 			}
 		}
 		.AddGood {
-			margin-left: 600px;
+			margin-left: 500px;
+			margin-right:20px;
 			width: 240px;
 			height: 51px;
 			gap: 12px;
 			opacity: 0px;
 			border: none;
 			background: rgba(53, 52, 51, 1);
+		}
+		.selectors {
+			display: flex;
+			width: 352px;
+			height: 35px;
+			gap: 16px;
+			opacity: 0px;
+			background: rgba(53, 52, 51, 1);
+			.priceSelectors {
+				width: 0px;
+				height: 0px;
+
+				gap: 11px;
+				border-radius: 10px;
+
+				opacity: 0px;
+
+				select {
+					position: absolute;
+					top: 140px;
+					left: 320px;
+					width: 194px;
+					height: 35px;
+					border-radius: 10px;
+					border: 1px solid rgba(255, 255, 255, 1);
+					background: rgba(53, 52, 51, 1);
+					color: white;
+					//styleName: body text;
+					font-family: Montserrat;
+					font-size: 20px;
+					font-weight: 400;
+					line-height: 24.82px;
+					text-align: left;
+					text-underline-position: from-font;
+					text-decoration-skip-ink: none;
+				}
+			}
+			.CategorySelectors {
+				width: 0px;
+				height: 0px;
+
+				gap: 11px;
+				border-radius: 10px;
+				border: 1px;
+				opacity: 0px;
+
+				background: rgba(53, 52, 51, 1);
+				select {
+					position: absolute;
+					top: 139px;
+					left: 540px;
+					width: 142px;
+					height: 35px;
+					border-radius: 10px;
+					font-family: Montserrat;
+					font-size: 20px;
+					font-weight: 400;
+					line-height: 24.82px;
+					text-align: left;
+					text-underline-position: from-font;
+					text-decoration-skip-ink: none;
+					background: rgba(53, 52, 51, 1);
+					color: white;
+					border: 1px solid rgba(255, 255, 255, 1);
+				}
+			}
 		}
 	}
 	.body {
@@ -342,6 +445,16 @@
 					height: 45px;
 					padding: 7px 33px 7px 33px;
 					gap: 10px;
+					font-size: 20px;
+					//styleName: CTA;
+					font-family: Montserrat;
+					font-size: 20px;
+					font-weight: 600;
+					line-height: 31.03px;
+					text-align: left;
+					text-underline-position: from-font;
+					text-decoration-skip-ink: none;
+
 					border-radius: 15px;
 					opacity: 0px;
 					background: rgba(255, 255, 255, 1);
@@ -376,7 +489,7 @@
 	footer {
 		display: flex;
 		margin-top: 30px;
-		width: 1600px;
+		width: 1500px;
 		height: 150px;
 		top: 874px;
 		padding: 25px 50px 25px 50px;

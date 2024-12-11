@@ -129,7 +129,7 @@
 <style lang="scss">
 	.header {
 		display: flex;
-		width: 1600px;
+		width: 1500px;
 		height: 100px;
 		border-bottom: 1px solid;
 		padding: 20px 50px;
@@ -330,7 +330,7 @@
 	footer {
 		display: flex;
 		position: absolute;
-		width: 1600px;
+		width: 1500px;
 		height: 150px;
 		top: 874px;
 		padding: 25px 50px 25px 50px;

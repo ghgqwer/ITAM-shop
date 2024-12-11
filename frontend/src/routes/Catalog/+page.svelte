@@ -30,6 +30,27 @@
     IsUnique: boolean;
     Category: string;
 }
+
+let selectedCategory: string = "";
+	let selectedSort: string = ""; // Для сортировки: "asc" — сначала дешевле, "desc" — сначала дороже
+	let categories = ["Одежда", "Аксессуары", "Канцелярия", "Другое"]; // Пример категорий
+
+	$: filteredGoods = (() => {
+		let goodsArray = $allGoods;
+
+		// Фильтрация по категории
+		if (selectedCategory) {
+			goodsArray = goodsArray.filter(good => good.Category === selectedCategory);
+		}
+
+		// Сортировка
+		goodsArray.sort((a, b) => {
+			return selectedSort === "asc" ? a.Price - b.Price : b.Price - a.Price;
+		});
+
+		return goodsArray;
+	})();
+
 	
 </script>
 
@@ -67,10 +88,25 @@
 <div class="allGoodsManager">
 	<div class="abGoods">
 		<div class="txt">Все товары</div>
-		<div class="selections">
-			<div class="price"></div>
-			<div class="color"></div>
-			<div class="category"></div>
+		<div class="selectors">
+			<div class="priceSelectors">
+				<select id="sortSelect" bind:value={selectedSort}>
+					<option value="" disabled selected>Сначала дороже</option>
+					<!-- Placeholder -->
+					<option value="asc">Сначала дешевле</option>
+					<option value="desc">Сначала дороже</option>
+				</select>
+			</div>
+			<div class="CategorySelectors">
+				<select id="categorySelect" bind:value={selectedCategory}>
+					<option value="" disabled selected>Категория</option>
+					<!-- Placeholder -->
+					<option value="">Все товары</option>
+					{#each categories as category}
+						<option value={category}>{category}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 	</div>
 	<div class="balans">
@@ -80,16 +116,17 @@
 </div>
 {#if $allGoods.length !== 0}
 	<div class="goods">
-		{#each $allGoods as good}
+		{#each filteredGoods as good}
 		{#if search.length == 0 || good.Name.includes(search)}
 			<div class="good">
-				<button class="image" on:click={()=>{OpenGood(good)}}>
+				<button class="imag" on:click={()=>{OpenGood(good)}}>
 					<img class="image" src={`data:image/jpg;base64,${good.Photo}`} alt="" />
 				</button>
 				
 				<div class="description">
-					<div class="nameGood">{good.Name}</div>
 					<div class="priceGood">{good.Price} коинов</div>
+					<div class="nameGood">{good.Name}</div>
+					
 				</div>
 			</div>
 
@@ -134,7 +171,7 @@
 <style lang="scss">
 	.header {
 		display: flex;
-		width: 1600px;
+		width: 1500px;
 		height: 100px;
 		border-bottom: 1px solid;
 		padding: 20px 50px;
@@ -223,45 +260,75 @@
 				text-decoration-skip-ink: none;
 				color: white;
 			}
-			.selections {
-				width: 464px;
-				height: 35px;
-				gap: 16px;
+			.selectors {
+			display: flex;
+			width: 352px;
+			height: 35px;
+			gap: 16px;
+			opacity: 0px;
+			background: rgba(53, 52, 51, 1);
+			.priceSelectors {
+				width: 0px;
+				height: 0px;
+
+				gap: 11px;
+				border-radius: 10px;
+
 				opacity: 0px;
-				.price {
+
+				select {
+					position: absolute;
+					top: 130px;
+					left: 250px;
 					width: 194px;
 					height: 35px;
-					padding: 5px 10px 5px 10px;
-					gap: 11px;
 					border-radius: 10px;
-					border: 1px;
-					opacity: 0px;
+					border: 1px solid rgba(255, 255, 255, 1);
+					background: rgba(53, 52, 51, 1);
 					color: white;
+					//styleName: body text;
+					font-family: Montserrat;
+					font-size: 20px;
+					font-weight: 400;
+					line-height: 24.82px;
+					text-align: left;
+					text-underline-position: from-font;
+					text-decoration-skip-ink: none;
 				}
-				.color {
-					width: 96px;
-					height: 35px;
-					padding: 5px 10px 5px 10px;
-					gap: 11px;
-					border-radius: 10px;
-					border: 1px;
-					opacity: 0px;
-					color: white;
-				}
-				.category {
+			}
+			.CategorySelectors {
+				width: 0px;
+				height: 0px;
+
+				gap: 11px;
+				border-radius: 10px;
+				border: 1px;
+				opacity: 0px;
+
+				background: rgba(53, 52, 51, 1);
+				select {
+					position: absolute;
+					top: 130px;
+					left: 460px;
 					width: 142px;
 					height: 35px;
-					padding: 5px 10px 5px 10px;
-					gap: 11px;
 					border-radius: 10px;
-					border: 1px;
-					opacity: 0px;
+					font-family: Montserrat;
+					font-size: 20px;
+					font-weight: 400;
+					line-height: 24.82px;
+					text-align: left;
+					text-underline-position: from-font;
+					text-decoration-skip-ink: none;
+					background: rgba(53, 52, 51, 1);
 					color: white;
+					border: 1px solid rgba(255, 255, 255, 1);
 				}
 			}
 		}
+		}
 		.balans {
-			margin-top:40px;
+			margin-top:10px;
 			width: 278px;
 			height: 29px;
 			font-family: Montserrat;
@@ -287,7 +354,7 @@
 	}
 	.goods {
 		position: absolute;
-		margin-top:30px;
+		margin-top:40px;
 		top: 196px;
 		left: 50px;
 		width: 305px;
@@ -298,13 +365,19 @@
 		grid-template-columns: repeat(4, 1fr); /* 4 колонки одинаковой ширины */
 		.good {
 			
-			.image {
-					margin-right:10px;
-				width: 305px;
-				height: 344px;
-				
-				border-radius: 15px;
-				
+			.imag{
+				width:0px;
+				height:0px;
+				background: rgba(53, 52, 51, 1);
+				border:none;
+				.image {
+					
+					width: 305px;
+					height: 344px;
+					
+					border-radius: 15px;
+					
+				}
 			}
 			
 			.description {
@@ -393,7 +466,7 @@
 		display: flex;
 		position:absolute;
 		margin-top: 250px;
-		width: 1600px;
+		width: 1500px;
 		height: 150px;
 		top: 874px;
 		padding: 25px 50px 25px 50px;

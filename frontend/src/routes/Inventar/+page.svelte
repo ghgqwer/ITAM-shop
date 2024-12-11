@@ -123,10 +123,15 @@
 	<div class="goods">
 		{#each goods as good}
 			<div class="good">
-				<img class="image" src="/image.png" alt="" />
+				<div class=image>
+					<img class="image" src="/image.png" alt="" />
+					<img class="got" src="/got1.svg" alt=""/>
+				</div>
+				
 				<div class="description">
-					<div class="nameGood">{good.Name}</div>
 					<div class="priceGood">{good.Price} коинов</div>
+					<div class="nameGood">{good.Name}</div>
+					
 				</div>
 			</div>
 		{/each}
@@ -156,7 +161,7 @@
 <style lang="scss">
 	.header {
 		display: flex;
-		width: 1600px;
+		width: 1500px;
 		height: 100px;
 		border-bottom: 1px solid;
 		padding: 20px 50px;
@@ -250,6 +255,9 @@
 				gap: 0px;
 				border-radius: 15px;
 				opacity: 0px;
+				.got{
+					
+				}
 			}
 			.description {
 				margin-left: 10px;
@@ -297,7 +305,7 @@
 	footer {
 		display: flex;
 		margin-top:250px;
-		width: 1600px;
+		width: 1500px;
 		height: 150px;
 		position:absolute;
 		top:874px;
