@@ -328,7 +328,7 @@
 
 				select {
 					position: absolute;
-					top: 140px;
+					top: 190px;
 					left: 320px;
 					width: 194px;
 					height: 35px;
@@ -358,7 +358,7 @@
 				background: rgba(53, 52, 51, 1);
 				select {
 					position: absolute;
-					top: 139px;
+					top: 190px;
 					left: 540px;
 					width: 142px;
 					height: 35px;

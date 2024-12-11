@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
-	import {bImg} from "./logic";
+	import { bImg } from "./logic";
 	onMount(() => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 	});
-	
-	import {loadGood } from "./logic";
+
+	import { loadGood } from "./logic";
 	export let data;
 	interface GoodType {
 		Name: string;
@@ -18,37 +18,47 @@
 		IsUnique: boolean;
 		Category: string;
 	}
+	function simpleHash() {
+		const str = Math.random().toString(36).substring(2, 15);
 
-
-	let good: GoodType | undefined;
-	
-	if(data.id=="new"){
-		good={
-			Name: "",
-		Description: "",
-	    ProductID: "",
-		Photo: "",
-		Count: 0,
-		Price: 0,
-		IsUnique: true,
-		Category: "",
+		let hash = 5381;
+		for (let i = 0; i < str.length; i++) {
+			hash = (hash * 33) ^ str.charCodeAt(i);
 		}
-		console.log("Новый товар:", good)
-	} else{
-		onMount(async () => {
-		good = await loadGood(data.id);
+		return hash >>> 0;
+	}
+	
 
-		if (good) {
-			nameInput = good.Name;
-			descriptionInput = good.Description;
-			countInput = good.Count;
-			priceInput = good.Price;
-			isUnicInput = good.IsUnique;
-			categoryInput=good.Category;
-			img = good.Photo;
-			console.log(good);
-		} 
-	});
+	let image: string = "";
+	let good: GoodType | undefined;
+
+	if (data.id == "new") {
+		good = {
+			Name: "",
+			Description: "",
+			ProductID: "",
+			Photo: "",
+			Count: 0,
+			Price: 0,
+			IsUnique: true,
+			Category: ""
+		};
+		console.log("Новый товар:", good);
+	} else {
+		onMount(async () => {
+			good = await loadGood(data.id);
+
+			if (good) {
+				nameInput = good.Name;
+				descriptionInput = good.Description;
+				countInput = good.Count;
+				priceInput = good.Price;
+				isUnicInput = good.IsUnique;
+				categoryInput = good.Category;
+				image = good.Photo;
+				console.log(good);
+			}
+		});
 	}
 	let img: string = $bImg;
 	let nameInput = "";
@@ -57,56 +67,55 @@
 	let priceInput: number = 10;
 	let isUnicInput: boolean = true;
 	let categoryInput = "Одежда";
-	
+
 	function handlePurchaseTypeChange(event: Event) {
 		const selectElement = event.target as HTMLSelectElement;
 		isUnicInput = selectElement.value === "multiple";
 	}
 
-	
 	function profile() {
 		window.location.href = "/Exict";
 	}
-	let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
+	let token: string =
+		"P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA=";
 	async function saveGood() {
-		if(data.id=="new" && good!=undefined){
-			good.Name=nameInput;
-			good.Description=descriptionInput;
-			good.Count=countInput;
-			good.IsUnique=isUnicInput;
-			good.Category=categoryInput;
-			
+		if (data.id == "new" && good != undefined) {
+			good.Name = nameInput;
+			good.Description = descriptionInput;
+			good.Count = countInput;
+			good.IsUnique = isUnicInput;
+			good.Category = categoryInput;
+
 			try {
-        const response = await fetch("http://89.111.154.197:8080/api/admin/storageProduct", {
-            method: "POST",
-            body: JSON.stringify({
-				ProductID: self.crypto.randomUUID().trim(),
-                Name: nameInput,
-                Description: descriptionInput,
-                Count: Number(countInput),
-                Price: Number(priceInput),
-                IsUnique: isUnicInput,
-                Category: categoryInput,
-				Photo: image
-
-            }),
-            headers: {
-                "Content-Type": "application/json",
-				"Authorization": token
-
-            }
-        });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.json}`);
-        }
-		goto(`/AdminCatalog`);
-    } catch (error) {
-        console.log("Ошибка:", error);
-    }
-		} else if(good){
+				const response = await fetch("http://89.111.154.197:8080/api/admin/storageProduct", {
+					method: "POST",
+					body: JSON.stringify({
+						ProductID: String(simpleHash()),
+						Name: nameInput,
+						Description: descriptionInput,
+						Count: Number(countInput),
+						Price: Number(priceInput),
+						IsUnique: isUnicInput,
+						Category: categoryInput,
+						Photo: image
+					}),
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: token
+					}
+				});
+				console.log(simpleHash())
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.json}`);
+				}
+				goto(`/AdminCatalog`);
+			} catch (error) {
+				console.log("Ошибка:", error);
+			}
+		} else if (good) {
 			const updatedGood = {
 				...good,
-				id:data.id,
+				id: data.id,
 				Name: nameInput,
 				Description: descriptionInput,
 				Count: countInput,
@@ -115,88 +124,78 @@
 				Category: categoryInput,
 				Photo: image
 			};
-						try {
-							const response = await fetch("http://89.111.154.197:8080/api/admin/storageProduct", {
-								method: "PUT",
-								body: JSON.stringify({
-									ProductID: updatedGood.id,
-						            Name: updatedGood.Name,
-						            Description: updatedGood.Description,
-						            Count: Number(updatedGood.Count),
-						            Price: Number(updatedGood.Price),
-						            IsUnique: updatedGood.IsUnique,
-									Category:updatedGood.Category,
-									Photo: updatedGood.Photo
-								}),
-								headers: {
-                "Content-Type": "application/json",
-				"Authorization": token
-
-            }
-							});
-
-							if (!response.ok) {
-								uploadStatus = "File uploaded successfully!";
-							} 
-							goto(`/AdminCatalog`)
-						} catch (error) {
-							console.error("Ошибка при обновлении товара:", error);
-						}
+			try {
+				const response = await fetch("http://89.111.154.197:8080/api/admin/storageProduct", {
+					method: "PUT",
+					body: JSON.stringify({
+						ProductID: updatedGood.id,
+						Name: updatedGood.Name,
+						Description: updatedGood.Description,
+						Count: Number(updatedGood.Count),
+						Price: Number(updatedGood.Price),
+						IsUnique: updatedGood.IsUnique,
+						Category: updatedGood.Category,
+						Photo: updatedGood.Photo
+					}),
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: token
 					}
+				});
+
+				if (!response.ok) {
+					uploadStatus = "File uploaded successfully!";
 				}
-	
-
-			
-
-				let fileInput: HTMLInputElement | null;
-let selectedFiles: File[] = [];
-let uploadStatus: string = "";
-let currentImageIndex: number = 0;
-let image: string = ""; // Изменяем массив на отдельную строковую переменную
-
-function openFileDialog(): void {
-    if (fileInput) {
-        fileInput.click();
-    }
-}
-
-async function handleFileChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const files = target.files;
-
-    if (files && files.length > 0) {
-        // Очищаем предыдущие выбранные файлы
-        selectedFiles = [];
-
-        // Проверяем, что выбран только один файл
-        if (files.length > 1) {
-            uploadStatus = "Пожалуйста, загрузите только одно изображение.";
-            return;
-        } else {
-            selectedFiles.push(files[0]); // Добавляем только один файл
-        }
-
-        const file = selectedFiles[0];
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64String = reader.result as string;
-            console.log("Добавлено изображение:", base64String);
-
-            image = base64String.split(",")[1]; // Сохраняем изображение в переменной
-            currentImageIndex = 0; // Указываем индекс первого изображения (хотя это может быть не нужно)
-            uploadStatus = "Изображение загружено."; // Например, вы можете менять статус загрузки
-        };
-        reader.readAsDataURL(file); // Читаем файл как Data URL
-    }
-}
-function backTM(){
-		goto(`/AdminCatalog`)
+				goto(`/AdminCatalog`);
+			} catch (error) {
+				console.error("Ошибка при обновлении товара:", error);
+			}
+		}
 	}
 
+	let fileInput: HTMLInputElement | null;
+	let selectedFiles: File[] = [];
+	let uploadStatus: string = "";
+	let currentImageIndex: number = 0;
 
-	
-	
-    
+	function openFileDialog(): void {
+		if (fileInput) {
+			fileInput.click();
+		}
+	}
+
+	async function handleFileChange(event: Event): void {
+		const target = event.target as HTMLInputElement;
+		const files = target.files;
+
+		if (files && files.length > 0) {
+			// Очищаем предыдущие выбранные файлы
+			selectedFiles = [];
+
+			// Проверяем, что выбран только один файл
+			if (files.length > 1) {
+				uploadStatus = "Пожалуйста, загрузите только одно изображение.";
+				return;
+			} else {
+				selectedFiles.push(files[0]); // Добавляем только один файл
+			}
+
+			const file = selectedFiles[0];
+			const reader = new FileReader();
+			reader.onloadend = () => {
+				const base64String = reader.result as string;
+				console.log("Добавлено изображение:", base64String);
+
+				image = base64String.split(",")[1]; // Сохраняем изображение в переменной
+				currentImageIndex = 0; // Указываем индекс первого изображения (хотя это может быть не нужно)
+				uploadStatus = "Изображение загружено."; // Например, вы можете менять статус загрузки
+			};
+			reader.readAsDataURL(file); // Читаем файл как Data URL
+		}
+	}
+	function backTM() {
+		goto(`/AdminCatalog`);
+	}
 </script>
 
 <div class="header">
@@ -223,19 +222,35 @@ function backTM(){
 </div>
 
 <div class="body">
-	<button class="backToMain" on:click={()=>{backTM()}}>
+	<button
+		class="backToMain"
+		on:click={() => {
+			backTM();
+		}}
+	>
 		<img src="/backToMain.svg" alt="" />
 	</button>
-	
-	
+
 	<div class="pictures">
 		<button class="newImage" on:click={openFileDialog}>Добавить фото</button>
-		<input type="file" bind:this={fileInput} on:change={handleFileChange} class="hidden" multiple style="display:none;" />
-	
-		{#if image !== ""} <!-- Проверяем, есть ли загруженная картинка -->
+		<input
+			type="file"
+			bind:this={fileInput}
+			on:change={handleFileChange}
+			class="hidden"
+			multiple
+			style="display:none;"
+		/>
+
+		{#if image !== ""}
+			<!-- Проверяем, есть ли загруженная картинка -->
 			<img class="photoes" src={`data:image/jpg;base64,${image}`} alt="" />
 		{:else}
-		    <img class="photoes" src={`data:image/jpg;base64,${img}`} alt="" /><!-- Отображаем общее сообщение об отсутствии изображения -->
+			<img
+				class="photoes"
+				src={`data:image/jpg;base64,${img}`}
+				alt=""
+			/><!-- Отображаем общее сообщение об отсутствии изображения -->
 		{/if}
 	</div>
 	<div class="information">
@@ -274,15 +289,13 @@ function backTM(){
 		</div>
 		<div class="category">
 			<div class="txtCat">Категория:</div>
-			
-				<select bind:value={categoryInput}>
-					<option value="Одежда">Одежда</option>
-					<option value="Аксессуары">Аксессуары</option>
-					<option value="Канцелярия">Канцелярия</option>
-					<option value="Другое">Другое</option>
-					
-				</select>
-			
+
+			<select bind:value={categoryInput}>
+				<option value="Одежда">Одежда</option>
+				<option value="Аксессуары">Аксессуары</option>
+				<option value="Канцелярия">Канцелярия</option>
+				<option value="Другое">Другое</option>
+			</select>
 		</div>
 
 		<button
@@ -388,7 +401,7 @@ function backTM(){
 			margin-top: 63px;
 			margin-left: 50px;
 		}
-		
+
 		.btn {
 			background-color: rgba(53, 52, 51, 1);
 			border: 0px;
@@ -430,31 +443,31 @@ function backTM(){
 			justify-content: space-between;
 			padding-bottom: 335px;
 			.newImage {
-			width: 120px;
-			height: 25px;
-			position: absolute;
-			top:10px;
-			
-			left: 10px;
-			gap: 0px;
-			border-bottom: 1px;
-			opacity: 0px;
-			cursor:pointer;
-			z-index:100;
-			//styleName: body text;
-			border: 0px;
-			font-family: Montserrat;
-			font-size: 16px;
-			font-weight: 400;
-			line-height: 24.82px;
-			text-align: left;
-			&:hover {
-            background: rgba(255, 255, 255, 1); // Изменяем фон для эффекта наведения
-        }
+				width: 120px;
+				height: 25px;
+				position: absolute;
+				top: 10px;
 
-			text-underline-position: from-font;
-			text-decoration-skip-ink: none;
-		}
+				left: 10px;
+				gap: 0px;
+				border-bottom: 1px;
+				opacity: 0px;
+				cursor: pointer;
+				z-index: 100;
+				//styleName: body text;
+				border: 0px;
+				font-family: Montserrat;
+				font-size: 16px;
+				font-weight: 400;
+				line-height: 24.82px;
+				text-align: left;
+				&:hover {
+					background: rgba(255, 255, 255, 1); // Изменяем фон для эффекта наведения
+				}
+
+				text-underline-position: from-font;
+				text-decoration-skip-ink: none;
+			}
 
 			.photoes {
 				width: 460px;
@@ -627,7 +640,6 @@ function backTM(){
 					padding-left: 10px;
 				}
 			}
-		
 		}
 		.saveChanges {
 			width: 330px;

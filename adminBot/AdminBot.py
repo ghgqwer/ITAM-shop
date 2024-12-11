@@ -89,6 +89,11 @@ async def add_coins(message: types.Message, state: FSMContext):
             "Coins": int(coins),  
         }
 
+        headers = {
+            "Authorization": "P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA=",  # Замените на ваш токен
+            "Content-Type": "application/json"  # Убедитесь, что тип контента корректный
+        }
+
         response = requests.put(API_URL, json=data)
 
         if response.status_code == 200:

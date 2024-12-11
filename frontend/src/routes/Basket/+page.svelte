@@ -164,48 +164,66 @@
 		ProductID: string;
 		Count: number;
 	}
+	let showModal = false;
 
-	async function buyGoods() {
-		try{
-			
-			let goodsToBuy: BuyType[] = $buyingGoods.map((item: any) => ({
-            ProductID: item.ProductID,
-            Count: Number(item.Count) // Здесь мы явно приводим к числу
-        }));
+	async function buyGoods() { 
+    try { 
+        // Получить актуальные данные из buyingGoods в момент вызова buyGoods
+        let goodsToBuy: BuyType[] = [];  
+        buyingGoods.subscribe((items) => { 
+            goodsToBuy = items.map((item: any) => ({ 
+                ProductID: item.ProductID, 
+                Count: Number(item.Count) // Приведение к числу 
+            })); 
+        })(); // Вызываем subscribe немедленно, чтобы получить значения
+		console.log("Товары для покупки:", goodsToBuy)
 
-
-		let response = await fetch("http://89.111.154.197:8080/api/basket/buy", {
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: token
-			},
-			body: JSON.stringify({ 
-				Items: [
-        {
-            "ProductID": "94a7d7e4-dd58-4023-8c1c-0424306d1ccb",
-            "Count": Number(1)
+        if (goodsToBuy.length === 0) {
+            console.error("Нет товаров для покупки"); 
+            return; 
         }
-    ]
-			 })
-		});
-		if (!response.ok) {
-				// Если произошла ошибка, можно отменить локальное обновление
-				
-		
-				throw new Error(`Ошибка на сервере при покупке: ${response.status}`);
-				
-			}
-			const obj = await response.json();
-			console.log(obj);
-		
 
-		} catch(error){
-			console.log("Ошибка при покупке:", error)
-			
-		}
-		
-		
+        let response = await fetch("http://89.111.154.197:8080/api/basket/buy", { 
+            method: "PUT", 
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": token 
+            }, 
+            body: JSON.stringify({ 
+                Items: goodsToBuy 
+            }) 
+        }); 
+
+        if (!response.ok) { 
+            const errorText = await response.text(); // Читаем текст ошибки 
+            console.error(`Ошибка на сервере: ${response.status}`, errorText); 
+
+            // Если произошла ошибка, можно отменить локальное обновление 
+            const text = await response.text(); // Читаем ответ как текст 
+            console.log(text); 
+
+            throw new Error(`Ошибка на сервере при покупке: ${response.status}`); 
+        } 
+        const text = await response.text(); // Читаем ответ как текст 
+        console.log("Текст ответа от сервера:", text);
+		console.log("Товары для покупки1:", goodsToBuy) // Выводим текст ответа 
+
+        if (text) { 
+            const obj = JSON.parse(text); // Пытаемся распарсить текст 
+            console.log(obj); 
+        } else { 
+            throw new Error("Ответ сервера пуст"); 
+        } 
+    } catch (error) { 
+        console.log("Ошибка при покупке:", error); 
+    } 
+}
+	function confirmPurchase() {
+		showModal = true; // Открываем модальное окно
+	}
+
+	function cancelPurchase() {
+		showModal = false; // Закрываем модальное окно
 	}
 </script>
 
@@ -283,7 +301,7 @@
 		{/each}
 	</div>
 	<div class="buying">
-		<button class="ordering" on:click={()=>{buyGoods()}}>
+		<button class="ordering" on:click={confirmPurchase}>
 			<div class="txtO">заказать</div>
 		</button>
 		<div class="buyingInfo">
@@ -325,6 +343,19 @@
 		</button>
 	</div>
 {/if}
+{#if showModal}
+	<div class="modal">
+		<div class="modal-content">
+			<div class="specMessage">
+				<div class="specQi">Подтверждаете заказ?</div>
+				<div class="reminding">Коины сразу спишутся со счёта после подтверждения заказа</div>
+			</div>
+			<button class="yes" on:click={buyGoods}>Да</button>
+			<button class="no" on:click={cancelPurchase}>Отмена</button>
+		</div>
+	</div>
+{/if}
+
 <footer>
 	<div class="itamF">
 		<img class="imgF" src="/itamF.svg" alt="" />
@@ -993,6 +1024,128 @@
 					color: rgba(255, 255, 255, 1);
 				}
 			}
+		}
+	}
+	.modal {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+
+		width: 614px;
+		height: 239px;
+		top: 393px;
+		left: 413.5px;
+		padding: 50px;
+		gap: 10px;
+		border-radius: 15px;
+		opacity: 0px;
+	}
+
+	.modal-content {
+		background: white;
+		padding: 20px;
+		border-radius: 5px;
+		text-align: center;
+		width: 514px;
+		height: 139px;
+		gap: 35px;
+		opacity: 0px;
+		.specMessage {
+			width: 514px;
+			height: 59px;
+			gap: 3px;
+			opacity: 0px;
+			.specQi {
+				width: 245px;
+				height: 31px;
+				gap: 0px;
+				opacity: 0px;
+				//styleName: CTA;
+				font-family: Montserrat;
+				font-size: 20px;
+				font-weight: 600;
+				line-height: 31.03px;
+				text-align: left;
+				text-underline-position: from-font;
+				text-decoration-skip-ink: none;
+				color: black;
+			}
+			.reminding {
+				width: 514px;
+				height: 25px;
+				gap: 0px;
+				opacity: 0px;
+				//styleName: body text;
+				font-family: Montserrat;
+				font-size: 16px;
+				font-weight: 400;
+				line-height: 24.82px;
+				text-align: left;
+				text-underline-position: from-font;
+				text-decoration-skip-ink: none;
+				color: rgba(53, 52, 51, 1);
+			}
+		}
+	}
+
+	.modal-content button {
+		margin: 10px;
+
+		width: 263px;
+		height: 45px;
+		gap: 20px;
+		opacity: 0px;
+		.yes {
+			width: 95px;
+			height: 45px;
+			padding: 7px 33px 7px 33px;
+			gap: 10px;
+			border-radius: 15px;
+			opacity: 0px;
+			background: rgba(30, 29, 28, 1);
+			// On drag
+			// Navigate to: "None";
+			// Animate: Smart animate;
+			animation-timing-function: ease-out;
+			animation-duration: 300ms;
+
+			// On drag
+			// Navigate to: "None";
+			// Animate: Smart animate;
+			animation-timing-function: ease-out;
+			animation-duration: 300ms;
+			color: white;
+		}
+		.no {
+			width: 148px;
+			height: 45px;
+			gap: 0px;
+			opacity: 0px;
+			width: 148px;
+			height: 45px;
+			padding: 7px 33px 7px 33px;
+			gap: 10px;
+			border-radius: 15px;
+			border: 1px 0px 0px 0px;
+			opacity: 0px;
+			border: 1px solid rgba(53, 52, 51, 1);
+			// On drag
+			// Navigate to: "None";
+			// Animate: Smart animate;
+			animation-timing-function: ease-out;
+			animation-duration: 300ms;
+
+			// On drag
+			// Navigate to: "None";
+			// Animate: Smart animate;
+			animation-timing-function: ease-out;
+			animation-duration: 300ms;
 		}
 	}
 </style>

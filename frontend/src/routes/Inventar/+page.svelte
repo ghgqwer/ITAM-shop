@@ -123,7 +123,7 @@
 	<div class="goods">
 		{#each goods as good}
 			<div class="good">
-				<div class=image>
+				<div class="img">
 					<img class="image" src="/image.png" alt="" />
 					<img class="got" src="/got1.svg" alt=""/>
 				</div>
@@ -249,16 +249,26 @@
 		display: grid;
 		grid-template-columns: repeat(4, 1fr); /* 4 колонки одинаковой ширины */
 		.good {
-			.image {
+			.img{
+				position:relative;
+				.image {
+				
 				width: 305px;
 				height: 344px;
-				gap: 0px;
 				border-radius: 15px;
-				opacity: 0px;
-				.got{
+				opacity: 1px;
+				
+			}
+			.got{
+					position:absolute;
+					top:14px;
+					left:15px;
+
+			}
+					
+					
 					
 				}
-			}
 			.description {
 				margin-left: 10px;
 				margin-top: 10px;
