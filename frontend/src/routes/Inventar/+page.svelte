@@ -1,4 +1,5 @@
 <script lang="ts">
+	let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
 	import { onMount } from "svelte";
 	onMount(() => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";

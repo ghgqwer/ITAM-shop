@@ -1,57 +1,164 @@
 <script lang="ts">
 	import { goto } from "$app/navigation";
 	import { onMount } from "svelte";
-	async function loadGoodsToBasket(event:Event): Promise<GoodType[]>{
-    event.preventDefault();
-    try{
-		let response = await fetch("http://127.0.0.1:8080/api/checkCart",{
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        credentials: 'include'
+	import { writable } from "svelte/store";
+	let quantities = writable<Record<string, number>>({});
+	let totalAmount=writable(0);
+	let totalCount=writable(0);
+	let token: string =
+		"P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA=";
+	async function loadGoodsToBasket(event: Event): Promise<GoodType[]> {
+		event.preventDefault();
+		try {
+			let response = await fetch("http://89.111.154.197:8080/api/checkCart", {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					"Authorization": token
+				},
+				credentials: "include"
+			});
+			if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+			const goods: GoodType[] = await response.json(); // Предполагаем, что ответ - это массив GoodType
+			console.log("Наши товары:", goods)
+			return goods;
+			
+			
+		} catch (error) {
+			console.log("Ошибка при выводе товаров в корзину:", error);
+			return [];
+		}
+	}
+	let basketGoods = writable<GoodType[]>([]);
 
-    });
-	const goods: GoodType[] = await response.json(); // Предполагаем, что ответ - это массив GoodType
-    return goods;
-	}catch(error){
-		console.log("Ошибка:", error);
-		return [];
-	}
-}
-    let basketGoods:GoodType[]=[];
-	onMount(async() => {
+	onMount(async () => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
-		basketGoods = await loadGoodsToBasket(new Event('load'));
+		const goods = await loadGoodsToBasket(new Event("load"));
+        basketGoods.set(goods);
+        quantities.set(Object.fromEntries(goods.map(good => [good.ProductID, 1])));
+
 	});
-	let amount = 1;
+	function updateTotal(){
+		basketGoods.subscribe(goods=>{
+			const quantityData=$quantities;
+			const total=goods.reduce((acc,good)=>{
+				const quantity=quantityData[good.ProductID]||1;
+				return acc + (good.Price*quantity);
+			},0);
+			totalAmount.set(total);
+			const count = Object.values(quantityData).reduce((sum,qty)=>sum+qty,0);
+			totalCount.set(count);
+		})();
+		
+	}
+	quantities.subscribe(()=>{
+			updateTotal();
+		});
+	basketGoods.subscribe(()=>{
+			updateTotal();
+		});
 	interface GoodType {
-    Name: string;
-    Description: string;
-    ProductID: string;
-    Photo: string;
-    Count: number;
-    Price: number;
-    IsUnique: boolean;
-    Category: string;
-}
-	function profile(){
-		window.location.href="/Exict";
+		Name: string;
+		Description: string;
+		ProductID: string;
+		Photo: string;
+		Count: number;
+		Price: number;
+		IsUnique: boolean;
+		Category: string;
 	}
-	function plus(good: GoodType) {
-		if (amount < good.Count) {
-			amount++;
-		}
-	}
-	function minus(good: GoodType) {
-		if (amount > 1) {
-			amount--;
-		}
+	function profile() {
+		window.location.href = "/Exict";
 	}
 	
-	function forGoods(){
-		goto(`/Catalog`)
+
+	function forGoods() {
+		goto(`/Catalog`);
 	}
+	async function deleteGoodFromBasket(good:GoodType){
+		try{
+			let response= await fetch("http://89.111.154.197:8080/api/deleteFromCart",{
+			method:"DELETE",
+			headers: {
+					"Content-Type": "application/json",
+					"Authorization": token
+				},
+			body:JSON.stringify({
+				ProductID:good.ProductID
+			})
+
+		});
+		basketGoods.update(currentGoods => {
+                const updatedGoods = currentGoods.filter(item => item.ProductID !== good.ProductID);
+                return updatedGoods; // Возвращаем обновленный массив товаров
+            });
+			quantities.update(q => {
+                const { [good.ProductID]: removed, ...rest } = q;
+                return rest; // Удаляем количество товара
+            });
+
+
+
+		}catch(error){
+			console.log("Ошибка при удалении товара:", error)
+		}
+	} 
+
+	
+
+
+
+	async function updateGoodAmount(productID: string, action: 'increase' | 'decrease') {
+        quantities.update(currentQuantities => {
+            const currentAmount = currentQuantities[productID] || 1;
+
+            if (action === 'increase') {
+                if (currentAmount < 10) { // Здесь вы можете установить максимальное количество
+                    currentQuantities[productID] = currentAmount + 1;
+                }
+            } else if (action === 'decrease') {
+                if (currentAmount > 1) {
+                    currentQuantities[productID] = currentAmount - 1;
+                }
+            }
+			return { ...currentQuantities }; // Возвращаем обновленный объект количества
+        });
+		try {
+            const response = await fetch(action === 'increase' 
+                ? "http://89.111.154.197:8080/api/increaseProductCart" 
+                : "http://89.111.154.197:8080/api/decreaseProductCart", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": token
+                },
+                body: JSON.stringify({ ProductID: productID })
+            });
+            if (!response.ok) {
+                // Если произошла ошибка, можно отменить локальное обновление
+                throw new Error(`Ошибка на сервере: ${response.status}`);
+            }
+        } catch (error) {
+            console.log("Ошибка при изменении количества товара на сервере:", error);
+            // Возврат к предыдущему количеству, если произошла ошибка на сервере (опционально)
+            quantities.update(currentQuantities => {
+                const currentAmount = currentQuantities[productID] || 1;
+                if (action === 'increase') {
+                    currentQuantities[productID] = currentAmount - 1; // Уменьшаем обратно
+                } else if (action === 'decrease') {
+                    currentQuantities[productID] = currentAmount + 1; // Увеличиваем обратно
+                }
+                return { ...currentQuantities };
+            });
+        }
+
+
+    }
+
+		
+
 </script>
 
 <div class="header">
@@ -71,7 +178,12 @@
 				</button></a
 			>
 
-			<button class="profile" on:click={()=>{profile()}}>
+			<button
+				class="profile"
+				on:click={() => {
+					profile();
+				}}
+			>
 				<img src="/profile.svg" alt="" />
 				профиль
 			</button>
@@ -90,28 +202,29 @@
 		<div class="coloredWord">10 коинов</div>
 	</div>
 </div>
-{#if basketGoods.length>0}
+{#if $basketGoods.length > 0}
 	<div class="goods">
-		{#each basketGoods as good}
+		{#each $basketGoods as good}
 			<div class="good">
-				<img class="image" src="/image.png" alt="" />
+				<img class="image" src={`data:image/jpg;base64,${good.Photo}`} alt="" />
 				<div class="description">
 					<div class="nameGood">{good.Name}</div>
 					<div class="left">Осталось {good.Count} шт</div>
-				</div>
-				<div class="cost">
-					<div class="priceGood">{good.Price} коинов</div>
 					<div class="changeAmount">
-						<button class="minus" on:click={() => minus(good)}>
+						<button class="minus" on:click={() => updateGoodAmount(good.ProductID, 'decrease')}>
 							<img src="/minus.png" alt="" />
 						</button>
-						<div class="txtA">{good.Count}</div>
-						<button class="plus" on:click={() => plus(good)}>
+						<div class="txtA">{$quantities[good.ProductID] || 1}</div>
+						<button class="plus" on:click={() => updateGoodAmount(good.ProductID, 'increase') }>
 							<img src="/icon-plus.svg" alt="" />
 						</button>
 					</div>
 				</div>
-				<button class="delete">
+				<div class="cost">
+					<div class="priceGood">{good.Price} коинов</div>
+					
+				</div>
+				<button class="delete" on:click={()=>{deleteGoodFromBasket(good)}}>
 					<img src="/delete.svg" alt="" />
 				</button>
 			</div>
@@ -132,13 +245,13 @@
 				</div>
 				<div class="finalInfo">
 					<div class="finalGoods">
-						<div class="finalGoodsAmount">Товары, 2 шт</div>
-						<div class="finalCost">45 коинов</div>
+						<div class="finalGoodsAmount">Товары, {$totalCount} шт</div>
+						<div class="finalCost">{$totalAmount} коинов</div>
 					</div>
 					<div class="howMuchPay">
 						<div class="txtItog">Итого</div>
 						<div class="Pay">
-							<div class="digit">30</div>
+							<div class="digit">{$totalAmount}</div>
 							<img class="img" src="/coins.svg" alt="" />
 						</div>
 					</div>
@@ -150,8 +263,13 @@
 {:else}
 	<div class="AboutEmptyMessage">
 		<div class="Message1">Твоя корзина пуста.</div>
-		<button class="Message2" on:click={()=>{forGoods()}}>
-			<img src="/forGoods.svg" alt=""/>
+		<button
+			class="Message2"
+			on:click={() => {
+				forGoods();
+			}}
+		>
+			<img src="/forGoods.svg" alt="" />
 		</button>
 	</div>
 {/if}
@@ -176,6 +294,7 @@
 		</div>
 	</div>
 </footer>
+
 <style lang="scss">
 	.header {
 		display: flex;
@@ -302,9 +421,7 @@
 			position: relative; /* Позиционирование для псевдоэлемента */
 			padding: 20px; /* Отступ для внутреннего контента */
 			z-index: 1;
-            border:0px;
-
-			
+			border: 0px;
 		}
 	}
 	.goods {
@@ -350,6 +467,7 @@
 					color: rgba(255, 255, 255, 1);
 				}
 				.left {
+					
 					width: 248px;
 					height: 25px;
 					gap: 0px;
@@ -363,30 +481,6 @@
 					text-underline-position: from-font;
 					text-decoration-skip-ink: none;
 					color: rgba(138, 137, 137, 1);
-				}
-			}
-			.cost {
-				width: 164px;
-				height: 90px;
-				gap: 13px;
-				opacity: 0px;
-				.priceGood {
-					width: 164px;
-					height: 46px;
-					gap: 0px;
-					opacity: 0px;
-					//styleName: h2;
-					font-family: Montserrat Alternates;
-					font-size: 32px;
-					font-weight: 600;
-					line-height: 45.83px;
-					text-align: left;
-					text-underline-position: from-font;
-					text-decoration-skip-ink: none;
-					background: linear-gradient(90deg, #ff8964 0%, #8f7aff 100%);
-					background-clip: text;
-					-webkit-background-clip: text;
-					color: transparent;
 				}
 				.changeAmount {
 					display: flex;
@@ -434,6 +528,31 @@
 						color: rgba(255, 255, 255, 1);
 					}
 				}
+			}
+			.cost {
+				width: 164px;
+				height: 90px;
+				gap: 13px;
+				opacity: 0px;
+				.priceGood {
+					width: 164px;
+					height: 46px;
+					gap: 0px;
+					opacity: 0px;
+					//styleName: h2;
+					font-family: Montserrat Alternates;
+					font-size: 32px;
+					font-weight: 600;
+					line-height: 45.83px;
+					text-align: left;
+					text-underline-position: from-font;
+					text-decoration-skip-ink: none;
+					background: linear-gradient(90deg, #ff8964 0%, #8f7aff 100%);
+					background-clip: text;
+					-webkit-background-clip: text;
+					color: transparent;
+				}
+				
 			}
 			.delete {
 				width: 40px;
@@ -626,11 +745,11 @@
 								color: rgba(255, 255, 255, 1);
 							}
 							.img {
-								margin-top:1px;
-                                margin-right:4px;
+								margin-top: 1px;
+								margin-right: 4px;
 								width: 37px;
 								height: 40px;
-								
+
 								gap: 0px;
 								opacity: 0px;
 							}
@@ -640,8 +759,8 @@
 			}
 		}
 		.message1 {
-            margin-left:5px;
-            margin-top:30px;
+			margin-left: 5px;
+			margin-top: 30px;
 			width: 350px;
 			height: 50px;
 			gap: 0px;
@@ -681,7 +800,7 @@
 				opacity: 0px;
 			}
 			.data {
-				margin-top:30px;
+				margin-top: 30px;
 				width: 100px;
 				height: 29px;
 				gap: 0px;
@@ -698,20 +817,19 @@
 			}
 		}
 		.creators {
-			margin-right:50px;
+			margin-right: 50px;
 			display: flex;
 			width: 495px;
 			height: 59px;
 			gap: 30px;
 			opacity: 0px;
 			.tgtxt {
-				
-				margin-top:40px;
+				margin-top: 40px;
 				width: 20px;
 				height: 20px;
 				gap: 10px;
 				opacity: 0px;
-				color:grey;
+				color: grey;
 			}
 			.front {
 				width: fixed 173px;
@@ -734,7 +852,7 @@
 					color: rgba(138, 137, 137, 1);
 				}
 				.nikFront {
-					margin-top:10px;
+					margin-top: 10px;
 					width: 173px;
 					height: 29px;
 					gap: 0px;
@@ -771,7 +889,7 @@
 					color: rgba(138, 137, 137, 1);
 				}
 				.nikBack {
-					margin-top:10px;
+					margin-top: 10px;
 					width: 114px;
 					height: 29px;
 					gap: 0px;
@@ -809,7 +927,7 @@
 					color: rgba(138, 137, 137, 1);
 				}
 				.nikDes {
-					margin-top:10px;
+					margin-top: 10px;
 					width: 98px;
 					height: 29px;
 					gap: 0px;

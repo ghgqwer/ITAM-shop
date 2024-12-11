@@ -10,5 +10,6 @@ remind2
 receipt
 ServerDB.session.sql
 myapp
+frontendWithoutChanges
 #package-lock.json
 #git rm --cached <file>

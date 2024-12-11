@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { superForm } from "sveltekit-superforms";
 	export let data;
+	let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
     import { goto } from "$app/navigation";
 	const { form: newForm, message, enhance, errors } = superForm(data.form);
 	import { onMount } from "svelte";
@@ -24,7 +25,8 @@
 
 			}),
 			headers:{
-            "Content-Type":"application/json"
+            "Content-Type":"application/json",
+			"Authorization": token
             }
 		});
         if (!response.ok) {

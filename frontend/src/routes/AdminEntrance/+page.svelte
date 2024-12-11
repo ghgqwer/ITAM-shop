@@ -4,6 +4,7 @@
 	const { form: newForm, message, enhance, errors } = superForm(data.form);
 	import { onMount } from "svelte";
 	import { goto } from "$app/navigation";
+	let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
 	
 
 	onMount(() => {
@@ -19,7 +20,8 @@
 			const response = await fetch("http://89.111.154.197:8080/api/login", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+				"Authorization": token
             },
             body: JSON.stringify({
                 Login: $newForm.email,

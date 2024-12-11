@@ -1,1 +1,0 @@
-{"version":3,"file":"logic-1OBQlp2c.js","sources":["../../../.svelte-kit/adapter-node/chunks/logic.js"],"sourcesContent":["import { w as writable } from \"./index2.js\";\nlet allGoods = writable([]);\nexport {\n  allGoods as a\n};\n"],"names":[],"mappings":";;AACG,IAAC,QAAQ,GAAG,QAAQ,CAAC,EAAE;;;;"}

@@ -2,6 +2,8 @@
 	import { goto } from "$app/navigation";
 	import { loadGood } from "./logic";
 	import { onMount } from "svelte";
+	let token: string =
+		"P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA=";
 	onMount(() => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 	});
@@ -43,17 +45,19 @@
 		
 		good = await loadGood(data.id);
 		console.log(good)
+		console.log(data)
 	});
 	async function putInBasket(event:Event){
 		event.preventDefault();
 		try{
-			let response= await fetch("http://127.0.0.1:8080/api/addInCart",{
+			let response= await fetch("http://89.111.154.197:8080/api/addInCart",{
 			method: "POST",
 			body:JSON.stringify({
 				ProductID: data.id
 			}),
 			headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+				"Authorization": token
             },
 			credentials: 'include' 
 		});
@@ -380,6 +384,7 @@
 		}
 		.inBasket {
 				width: 303px;
+				text-align:center;
 				height: 70px;
 				margin-top:20px;
 				padding: 0px 85px 0px 85px;
@@ -388,16 +393,17 @@
 				opacity: 0px;
 				background: rgba(255, 255, 255, 1);
 				// On drag
-				// Navigate to: "None";
-				// Animate: Smart animate;
-				animation-timing-function: ease-out;
-				animation-duration: 300ms;
+// Navigate to: "None";
+// Animate: Smart animate;
+animation-timing-function: ease-out;
+animation-duration: 300ms;
 
-				// On drag
-				// Navigate to: "None";
-				// Animate: Smart animate;
-				animation-timing-function: ease-out;
-				animation-duration: 300ms;
+// On drag
+// Navigate to: "None";
+// Animate: Smart animate;
+animation-timing-function: ease-out;
+animation-duration: 300ms;
+
 
 				.txtInBasket {
 					width: 110px;

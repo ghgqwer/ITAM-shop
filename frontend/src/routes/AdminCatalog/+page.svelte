@@ -2,17 +2,20 @@
 	import { page } from "$app/stores";
 	let slug = $page.params.slug;
 	import { onMount } from "svelte";
+	let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
 
-	import { allGoods } from "../GoodCardAdmin/[id]/logic";
+	import { allGoods,goods } from "../GoodCardAdmin/[id]/logic";
 	import { loadGoods, createGood, DeleteGoodById } from "../GoodCardAdmin/[id]/logic";
 
 	import { goto } from "$app/navigation";
+	
 	onMount(async () => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 
 		// Загрузка товаров при монтировании компонента
-		const goods = await loadGoods();
+		const goods:GoodType[] = await loadGoods();
 		allGoods.set(goods); // Обновляем хранилище с загруженными товарами
+		
 	});
 	function profile() {
 		window.location.href = "/Exict";
@@ -34,46 +37,10 @@
 	async function NewGood() {
 		goto(`/GoodCardAdmin/new`);
 	}
-
-	let imageSrc = ""; // Переменная для хранения изображения
-
-	onMount(async () => {
-		// Запрос к серверу для получения изображения (пример URL)
-		const response = await fetch("http://89.111.154.197:8080/api/product/123"); // Замените на ваш API
-		const product = await response.json();
-
-		// Предполагается, что product.Photo содержит данные в Base64
-		if (product.Photo) {
-			imageSrc = `data:image/jpg;base64,${product.Photo}`; // Указывать тип изображения
-		}
-	});
-
-	async function getCookie() {
-		try{
-			let response = await fetch("http://89.111.154.197:8080/api/checkCookie", {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json"
-			}
-		});
-		let cookie=await response.json();
-		if (response.ok) {
-            // Успешная аутентификация
-			
-			console.log("Наши куки:",document.cookie); 
-			console.log("Куки111", cookie)
-        } else {
-            const errorData = await response.json();
-            // Тут вы можете обработать ошибки, если это необходимо
-            console.error(errorData);
-
-        }
-		}catch(error){
-			console.log("Ошибка:", error)
-		}
-	}
+	let sortOption="default";
+	
 </script>
-<button on:click={()=>{getCookie()}}>cookie</button>
+
 <div class="header">
 	<div class="headerContainer">
 		<div class="itamShop">
@@ -101,6 +68,11 @@
 		<div class="headManadge">
 			<div class="txt">Все товары</div>
 			<div class="managing"></div>
+		</div>
+		<div class="selectors">
+			<div class="priceSelectors">
+
+			</div>
 		</div>
 		<button
 			class="AddGood"

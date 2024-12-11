@@ -9,22 +9,28 @@ interface GoodType {
     IsUnique: boolean;
     Category: string;
 }
+let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
 export async function loadGood(id:string){
     try{
      let promise=await fetch(`http://89.111.154.197:8080/api/product/${id}`,
          {
              method: "GET",
              headers:{
-                 "Content-Type":"application/json"
+                 "Content-Type":"application/json",
+                 "Authorization": token
                  }
      
          
          }
         )
+        if (!promise.ok) {
+            throw new Error(`HTTP error! status загрузка карточки товара: ${promise.status}`);
+        }
         const obj = await promise.json();
         return obj;
+        
     } catch(error){
-     console.log("Ошибка:", error)
+     console.log("Ошибка при загрузке карточки товара:", error)
     }
  }
 export let allGoods=writable<GoodType[]>([]);
@@ -33,12 +39,13 @@ export async function loadGoods(): Promise<GoodType[]>{
         const response = await fetch('http://89.111.154.197:8080/api/products',{
             method: "GET",
             headers:{
-            "Content-Type":"application/json"
+            "Content-Type":"application/json",
+            "Authorization": token
             }
 
         });
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status загрузка товаров: ${response.status}`);
         }
 
         const obj = await response.json();
@@ -58,7 +65,7 @@ export async function loadGoods(): Promise<GoodType[]>{
         });
 
     } catch(error){
-        console.log("Ошибка:",error);
+        console.log("Ошибка при загрузке товаров:",error);
     }
     return[];
 }
