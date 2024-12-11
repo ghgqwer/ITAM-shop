@@ -94,7 +94,7 @@ async def add_coins(message: types.Message, state: FSMContext):
             "Content-Type": "application/json"  # Убедитесь, что тип контента корректный
         }
 
-        response = requests.put(API_URL, json=data)
+        response = requests.put(API_URL, json=data, headers=headers)
 
         if response.status_code == 200:
             await bot.send_message(message.from_user.id, "Successfully added coins!")
