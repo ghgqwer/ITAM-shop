@@ -80,7 +80,7 @@
         const response = await fetch("http://89.111.154.197:8080/api/admin/storageProduct", {
             method: "POST",
             body: JSON.stringify({
-                ProductID: self.crypto.randomUUID().trim(),
+				ProductID: self.crypto.randomUUID().trim(),
                 Name: nameInput,
                 Description: descriptionInput,
                 Count: Number(countInput),
