@@ -1,4 +1,5 @@
 <script lang="ts">
+	
 	import { page } from "$app/stores";
 	let slug = $page.params.slug;
 	import { onMount } from "svelte";
@@ -6,12 +7,14 @@
 	import { allGoods } from "../GoodCardAdmin/[id]/logic";
 	import { loadGoods } from "../GoodCardAdmin/[id]/logic";
 	import { goto } from "$app/navigation";
+	let balance:number=0;
 	onMount(async () => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 
 		// Загрузка товаров при монтировании компонента
 		const goods = await loadGoods();
-		allGoods.set(goods); // Обновляем хранилище с загруженными товарами
+		allGoods.set(goods);
+		balance= await getBalance();
 	});
 	let search="";
 	function profile(){
@@ -50,8 +53,25 @@ let selectedCategory: string = "";
 
 		return goodsArray;
 	})();
+	let token:string="P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA="
 
-	
+	async function getBalance(){
+		try{
+			let response= await fetch("http://89.111.154.197:8080/api/getBalance/taisiidemidowa@yandex.ru",{
+				method:"GET",
+				headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            }
+
+			});
+			const data = await response.json();
+			return data;
+		}catch(error){
+			console.log("Ошибка при получении баланса:", error);
+			return "";
+		}
+	}
 </script>
 
 <div class="header">
@@ -111,7 +131,7 @@ let selectedCategory: string = "";
 	</div>
 	<div class="balans">
 		Мой баланс:
-		<div class="coloredWord">10 коинов</div>
+		<div class="coloredWord">{balance} коинов</div>
 	</div>
 </div>
 {#if $allGoods.length !== 0}

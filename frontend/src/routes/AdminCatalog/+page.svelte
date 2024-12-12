@@ -317,6 +317,7 @@
 			gap: 16px;
 			opacity: 0px;
 			background: rgba(53, 52, 51, 1);
+			
 			.priceSelectors {
 				width: 0px;
 				height: 0px;
@@ -328,7 +329,7 @@
 
 				select {
 					position: absolute;
-					top: 190px;
+					top: 140px;
 					left: 320px;
 					width: 194px;
 					height: 35px;
@@ -344,6 +345,7 @@
 					text-align: left;
 					text-underline-position: from-font;
 					text-decoration-skip-ink: none;
+					
 				}
 			}
 			.CategorySelectors {
@@ -358,7 +360,7 @@
 				background: rgba(53, 52, 51, 1);
 				select {
 					position: absolute;
-					top: 190px;
+					top: 140px;
 					left: 540px;
 					width: 142px;
 					height: 35px;

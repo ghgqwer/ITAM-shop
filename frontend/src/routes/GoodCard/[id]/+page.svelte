@@ -4,8 +4,10 @@
 	import { onMount } from "svelte";
 	let token: string =
 		"P2LU3FWXFZFT7V2RG6MG6QYJMS6QMM6S3Z6BM32KUSRPLZQOT4LWGQDWBAHZW4KJQ53MSVXN5EQNKQMHBZL6VUG2DD557GLEBACHNHA=";
-	onMount(() => {
+		let balance:number=0;
+	onMount(async() => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
+		balance= await getBalance();
 	});
 	interface GoodType {
 		Name: string;
@@ -72,6 +74,24 @@
 		unic="единоразовая покупка"
 	} else{
 		unic="множественная покупка"
+	}
+
+	async function getBalance(){
+		try{
+			let response= await fetch("http://89.111.154.197:8080/api/getBalance/taisiidemidowa@yandex.ru",{
+				method:"GET",
+				headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            }
+
+			});
+			const data = await response.json();
+			return data;
+		}catch(error){
+			console.log("Ошибка при получении баланса:", error);
+			return "";
+		}
 	}
 </script>
 
@@ -329,7 +349,7 @@
 			.coins {
 				display: flex;
 				align-items: center;
-				width: 90px;
+				width: 140px;
 				height: 50px;
 				border-radius: 10px;
 				padding-top: 2px;

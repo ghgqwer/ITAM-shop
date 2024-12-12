@@ -32,12 +32,13 @@
 		}
 	}
 	let basketGoods = writable<GoodType[]>([]);
-
+		let balance:number=0;
 	onMount(async () => {
 		document.body.style.background = "rgba(53, 52, 51, 1)";
 		const goods = await loadGoodsToBasket(new Event("load"));
 		basketGoods.set(goods);
 		quantities.set(Object.fromEntries(goods.map(good => [good.ProductID, 1])));
+		balance= await getBalance();
 	});
 	function updateTotal() {
 		basketGoods.subscribe(goods => {
@@ -165,65 +166,118 @@
 		Count: number;
 	}
 	let showModal = false;
+	let showErrorModal = false; // Состояние для модального окна ошибки
+    let showConfirmationModal = false; // Состояние для модального окна подтверждения заказа
+    let errorMessage = ""
 
-	async function buyGoods() { 
-    try { 
-        // Получить актуальные данные из buyingGoods в момент вызова buyGoods
-        let goodsToBuy: BuyType[] = [];  
-        buyingGoods.subscribe((items) => { 
-            goodsToBuy = items.map((item: any) => ({ 
-                ProductID: item.ProductID, 
-                Count: Number(item.Count) // Приведение к числу 
-            })); 
-        })(); // Вызываем subscribe немедленно, чтобы получить значения
-		console.log("Товары для покупки:", goodsToBuy)
+	
 
-        if (goodsToBuy.length === 0) {
-            console.error("Нет товаров для покупки"); 
-            return; 
+    
+
+    async function buyGoods() {
+        try {
+            let goodsToBuy: BuyType[] = [];
+            buyingGoods.subscribe((items) => {
+                goodsToBuy = items.map((item: any) => ({
+                    ProductID: item.ProductID,
+                    Count: Number(item.Count)
+                }));
+            })();
+
+            console.log("Товары для покупки:", goodsToBuy)
+
+            if (goodsToBuy.length === 0) {
+                console.error("Нет товаров для покупки");
+                return;
+            }
+
+            let response = await fetch("http://89.111.154.197:8080/api/basket/buy", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": token
+                },
+                body: JSON.stringify({
+                    Items: goodsToBuy
+                })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text(); // Читаем текст ошибки
+                console.error(`Ошибка на сервере: ${response.status}`, errorText);
+
+                // Если ошибка недостаточно коинов, отображаем соответствующее сообщение
+                if (errorText.includes("недостаточно коинов")) { // Замените на вашу проверку
+                    errorMessage = "Недостаточно коинов для покупки";
+                    showErrorModal = true;
+                }
+                return;
+            } else{
+				showModal = true;
+			}
+
+            const text = await response.text();
+            console.log("Текст ответа от сервера:", text);
+
+            if (text) {
+                // Показываем окно подтверждения
+                showModal = true;
+            } else {
+                throw new Error("Ответ сервера пуст");
+            }
+        } catch (error) {
+            console.log("Ошибка при покупке:", error);
         }
+    }
 
-        let response = await fetch("http://89.111.154.197:8080/api/basket/buy", { 
-            method: "PUT", 
-            headers: { 
-                "Content-Type": "application/json", 
-                "Authorization": token 
-            }, 
-            body: JSON.stringify({ 
-                Items: goodsToBuy 
-            }) 
-        }); 
+    function confirmPurchase() {
+        // Здесь вы можете добавить логику для выполнения окончательной покупки, если необходимо
 
-        if (!response.ok) { 
-            const errorText = await response.text(); // Читаем текст ошибки 
-            console.error(`Ошибка на сервере: ${response.status}`, errorText); 
-
-            // Если произошла ошибка, можно отменить локальное обновление 
-            const text = await response.text(); // Читаем ответ как текст 
-            console.log(text); 
-
-            throw new Error(`Ошибка на сервере при покупке: ${response.status}`); 
-        } 
-        const text = await response.text(); // Читаем ответ как текст 
-        console.log("Текст ответа от сервера:", text);
-		console.log("Товары для покупки1:", goodsToBuy) // Выводим текст ответа 
-
-        if (text) { 
-            const obj = JSON.parse(text); // Пытаемся распарсить текст 
-            console.log(obj); 
-        } else { 
-            throw new Error("Ответ сервера пуст"); 
-        } 
-    } catch (error) { 
-        console.log("Ошибка при покупке:", error); 
-    } 
-}
-	function confirmPurchase() {
-		showModal = true; // Открываем модальное окно
+        // После подтверждения показываем окно подтверждения
+        
+        showModal = true; // Скрываем окно заказа
+    }
+	function elseMod(){
+		showModal=false;
+		showConfirmationModal = true;
 	}
 
-	function cancelPurchase() {
-		showModal = false; // Закрываем модальное окно
+    // Остальной код без изменений остается
+
+
+   
+
+    function cancelPurchase() {
+        showModal = false; // Закрываем модальное окно заказа
+    }
+
+    function closeErrorModal() {
+        showErrorModal = false; // Закрываем модальное окно ошибки
+    }
+
+    function closeConfirmationModal() {
+        showConfirmationModal = false; // Закрываем модальное окно подтверждения
+        // Можно добавить логику для перенаправления на каталог
+        goto('/Catalog');
+    }
+
+	async function getBalance(){
+		try{
+			let response= await fetch("http://89.111.154.197:8080/api/getBalance/taisiidemidowa@yandex.ru",{
+				method:"GET",
+				headers: {
+                "Content-Type": "application/json",
+                "Authorization": token
+            }
+
+			});
+			const data = await response.json();
+			return data;
+			
+		}catch(error){
+			console.log("Ошибка при получении баланса:", error);
+			return "";
+		}
 	}
 </script>
 
@@ -265,7 +319,7 @@
 	<div class="txtBasket">Корзина</div>
 	<div class="balans">
 		Мой баланс:
-		<div class="coloredWord">10 коинов</div>
+		<div class="coloredWord">{balance} коинов</div>
 	</div>
 </div>
 {#if $basketGoods.length > 0}
@@ -301,7 +355,7 @@
 		{/each}
 	</div>
 	<div class="buying">
-		<button class="ordering" on:click={confirmPurchase}>
+		<button class="ordering" on:click={buyGoods}>
 			<div class="txtO">заказать</div>
 		</button>
 		<div class="buyingInfo">
@@ -350,11 +404,41 @@
 				<div class="specQi">Подтверждаете заказ?</div>
 				<div class="reminding">Коины сразу спишутся со счёта после подтверждения заказа</div>
 			</div>
-			<button class="yes" on:click={buyGoods}>Да</button>
+			<div class="btnM">
+			<button class="yes" on:click={elseMod}>Да</button>
 			<button class="no" on:click={cancelPurchase}>Отмена</button>
+		</div>
 		</div>
 	</div>
 {/if}
+{#if showErrorModal}
+    <div class="modal">
+        <div class="modal-content">
+            <div class="specMessage">
+                <div class="specQi">Ошибка</div>
+				<div class="reminding">Недостаточно коинов для покупки</div>
+            </div>
+            <div class="btnM">
+                <button class="yes" on:click={closeErrorModal}>Ок</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
+{#if showConfirmationModal}
+    <div class="modal">
+        <div class="modal-content">
+            <div class="specMessage">
+                <div class="specQi">Заказ подтверждён!</div>
+				<div class="reminding"> Информация прийдёт вам на почту</div>
+            </div>
+            <div class="btnM">
+                <button class="yes1" on:click={closeConfirmationModal}>В каталог</button>
+            </div>
+        </div>
+    </div>
+{/if}
+
 
 <footer>
 	<div class="itamF">
@@ -554,6 +638,7 @@
 					height: 25px;
 					gap: 0px;
 					opacity: 0px;
+					margin-top:30px;
 					//styleName: body text;
 					font-family: Montserrat;
 					font-size: 16px;
@@ -1037,23 +1122,20 @@
 		justify-content: center;
 		align-items: center;
 
-		width: 614px;
-		height: 239px;
-		top: 393px;
-		left: 413.5px;
-		padding: 50px;
-		gap: 10px;
-		border-radius: 15px;
-		opacity: 0px;
+		
+		
 	}
 
 	.modal-content {
 		background: white;
+		font-size: Monsterrat;
 		padding: 20px;
-		border-radius: 5px;
+		padding-top:40px;
+		padding-left:30px;
+		border-radius: 20px;
 		text-align: center;
 		width: 514px;
-		height: 139px;
+		height: 240px;
 		gap: 35px;
 		opacity: 0px;
 		.specMessage {
@@ -1094,8 +1176,10 @@
 		}
 	}
 
-	.modal-content button {
-		margin: 10px;
+	.btnM {
+		margin-top: 40px;
+		text-align:left;
+		margin-bottom:20px;
 
 		width: 263px;
 		height: 45px;
@@ -1106,6 +1190,7 @@
 			height: 45px;
 			padding: 7px 33px 7px 33px;
 			gap: 10px;
+			font-size:20px;
 			border-radius: 15px;
 			opacity: 0px;
 			background: rgba(30, 29, 28, 1);
@@ -1123,6 +1208,10 @@
 			color: white;
 		}
 		.no {
+			position:absolute;
+			left:650px;
+			font-size:20px;
+			font-weight:20px;
 			width: 148px;
 			height: 45px;
 			gap: 0px;
@@ -1146,6 +1235,29 @@
 			// Animate: Smart animate;
 			animation-timing-function: ease-out;
 			animation-duration: 300ms;
+			background-color:white;
 		}
+	}
+	.yes1{
+		width: 200px;
+			height: 45px;
+			padding: 7px 33px 7px 33px;
+			gap: 10px;
+			font-size:20px;
+			border-radius: 15px;
+			opacity: 0px;
+			background: rgba(30, 29, 28, 1);
+			// On drag
+			// Navigate to: "None";
+			// Animate: Smart animate;
+			animation-timing-function: ease-out;
+			animation-duration: 300ms;
+
+			// On drag
+			// Navigate to: "None";
+			// Animate: Smart animate;
+			animation-timing-function: ease-out;
+			animation-duration: 300ms;
+			color: white;
 	}
 </style>
