@@ -15,6 +15,6 @@ func main() {
 	defer dbGoods.CloseDataBase()
 	defer dbUsers.CloseUsersDataBase()
 
-	serv := server.New(":8080", dbGoods, dbUsers, dbCart) //dbCart
+	serv := server.New(":8080", dbGoods, dbUsers, dbCart)
 	serv.StartServer()
 }

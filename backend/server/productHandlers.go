@@ -86,27 +86,3 @@ func (r *Server) handlerGetGoods(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, res)
 }
-
-// // Проверяем, существует ли поле Photo
-// if res.Photo != "" {
-// 	// Путь для сохранения изображения
-// 	photoFilePath := fmt.Sprintf("./%s.jpg", res.ProductID)
-
-// 	// Декодируем изображение из Base64
-// 	decodedPhoto, err := base64.StdEncoding.DecodeString(res.Photo)
-// 	if err != nil {
-// 		log.Printf("Error decoding photo: %v", err)
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not decode photo"})
-// 		return
-// 	}
-
-// 	// Сохраняем изображение декодированными данными в файл
-// 	err = os.WriteFile(photoFilePath, decodedPhoto, 0644) // сохраняем декодированные данные из Photo
-// 	if err != nil {
-// 		log.Printf("Error saving photo: %v", err)
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Could not save photo"})
-// 		return
-// 	}
-
-// 	log.Printf("Photo saved successfully: %s", photoFilePath)
-// }

@@ -31,7 +31,7 @@ const (
 	isUnique BOOL, 
 	category TEXT,
 	photo TEXT, 
-	UNIQUE (id))` //BYTEA
+	UNIQUE (id))`
 
 	Add = `INSERT INTO goods (id, name, description, count, price, isUnique, category, photo) 
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`

@@ -32,15 +32,6 @@ func New(host string, dbGoods *database.GoodsDataBase, dbUsers *database.UsersDa
 func (r *Server) newApi() *gin.Engine {
 	engine := gin.New()
 
-	// engine.Use(cors.New(cors.Config{
-	// 	AllowAllOrigins: true,
-	// 	//		AllowOrigins:     []string{"http://localhost:5173"}, // Разрешите доступ для этого источника
-	// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-	// 	ExposeHeaders:    []string{"Content-Length"},
-	// 	AllowCredentials: true,
-	// 	MaxAge:           12 * time.Hour,
-	// }))
 	engine.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000", "http://89.111.154.197:3000", "http://89.111.154.197:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -54,7 +45,7 @@ func (r *Server) newApi() *gin.Engine {
 		ctx.Status(200)
 	})
 
-	authUsers := engine.Group("/api", r.authentication()) //, r.authentication()
+	authUsers := engine.Group("/api", r.authentication())
 	deafultUsers := engine.Group("/api")
 
 	deafultUsers.GET("/product/:ID", r.handlerGetProduct)
@@ -80,7 +71,6 @@ func (r *Server) newApi() *gin.Engine {
 	authUsers.GET("/checkCart", r.handlerCheckCart)
 	authUsers.DELETE("/deleteFromCart", r.handlerDeteleProductFromCart)
 
-	//test endpoint
 	authUsers.GET("/checkCookie", r.handlerCheckCookie)
 	return engine
 }
@@ -88,34 +78,3 @@ func (r *Server) newApi() *gin.Engine {
 func (r *Server) StartServer() {
 	r.newApi().Run(r.host)
 }
-
-// engine.Use(cors.New(cors.Config{
-
-// 	AllowAllOrigins: true,
-// 	// AllowOrigins: []string{"http://example.com"},
-// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE"},
-// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-// 	ExposeHeaders:    []string{"Content-Length"},
-// 	AllowCredentials: true,
-// 	MaxAge:           12 * time.Hour,
-// }))
-
-// func (r *Server) handlerGetProduct(ctx *gin.Context) {
-// 	ID := ctx.Param("ID")
-// 	res, err := r.goodsDB.GetProduct(ID)
-// 	if err != nil {
-// 		ctx.AbortWithStatus(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	photoData := res.Photo
-
-// 	fileName := fmt.Sprintf("photo_%s.png", ID)
-// 	err = os.WriteFile(fileName, photoData, 0644)
-// 	if err != nil {
-// 		ctx.AbortWithStatus(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	ctx.JSON(http.StatusOK, res)
-// }

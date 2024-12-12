@@ -11,8 +11,8 @@ const (
 	//DROP TABLE IF EXISTS users;
 	// DROP TABLE IF EXISTS cart;
 	// DROP TABLE IF EXISTS users;
-	//DELETE FROM users WHERE login = '*';
-	//UPDATE users SET isAdmin = TRUE WHERE login = 'taisiidemidowa@yandex.ru';
+	//DELETE FROM users WHERE login = '';
+	//UPDATE users SET isAdmin = TRUE WHERE login = '';
 	createUsersDB = `
 	CREATE TABLE IF NOT EXISTS users (
 	id TEXT PRIMARY KEY, 
@@ -20,13 +20,13 @@ const (
 	password BYTEA, 
 	isAdmin BOOL, 
 	wallet INT,
-	acсessToken TEXT)` //,acсessToken BYTEA
+	acсessToken TEXT)`
 
 	addUser = `INSERT INTO users (id, login, password, isAdmin, wallet) 
 	VALUES ($1, $2, $3, $4, $5)`
 
 	updateUser = `UPDATE users SET login = $1, password = $2, isAdmin = $3, wallet = $4 
-	WHERE id = $5` //to rewrite login, password, adm, wall
+	WHERE id = $5`
 
 	addCoins = `UPDATE users SET wallet = wallet + $1 WHERE id = $2`
 

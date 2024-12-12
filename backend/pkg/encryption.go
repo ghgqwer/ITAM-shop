@@ -33,11 +33,9 @@ func Encrypt(accessToken string, key []byte) (string, error) {
 	stream := cipher.NewCFBEncrypter(block, iv)
 	stream.XORKeyStream(cipherText[aes.BlockSize:], []byte(accessToken))
 
-	// Кодируем результат в base32
 	return base32.StdEncoding.EncodeToString(cipherText), nil
 }
 
-// Decrypt расшифровывает токен, закодированный в base32, и возвращает исходное значение.
 func Decrypt(encryptedAccessToken string, key []byte) (string, error) {
 	cipherTextBytes, err := base32.StdEncoding.DecodeString(encryptedAccessToken)
 	if err != nil {
