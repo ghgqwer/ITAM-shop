@@ -223,6 +223,8 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 		return
 	}
 
+	ctx.Header("Authorization", accessToken)
+
 	// EncryptСookieAccessToken, err := pkg.Encrypt(accessToken, EncryptCookieKey)
 	// if err != nil {
 	// 	ctx.AbortWithStatus(http.StatusInternalServerError)
@@ -248,10 +250,22 @@ func (r *Server) handlerLoginUser(ctx *gin.Context) {
 		}
 	}()
 
+	//Solve for front tests
 	if _, err := tx.Exec("UPDATE users SET acсessToken = $1 WHERE login = $2 AND (acсessToken IS NULL OR acсessToken = '')", accessToken, postLoginRequest.Login); err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	//Solves for auth
+
+	//First solve
+
+	// if _, err := tx.Exec("UPDATE users SET acсessToken = $1 WHERE login = $2", accessToken, postLoginRequest.Login); err != nil {
+	// 	ctx.AbortWithStatus(http.StatusBadRequest)
+	// 	return
+	// }
+
+	//Second solve
 
 	// expirationTime := time.Now().Add(24 * time.Hour)
 	// cookie := http.Cookie{
