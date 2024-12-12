@@ -61,10 +61,11 @@ async def process_coins_enter(message: types.Message, state: FSMContext):
         await message.reply("You do not have permission to use this command.")
         return
     msg = message.text
-    if msg.isdigit() == False:
-        await message.reply("coins can be number only")
+    try:
+        coins = int(msg)
+    except ValueError:
+        await message.reply("Coins can be a number only")
         return
-    coins = int(msg)
     await state.update_data(coins=coins)
     await message.reply(f'You want to add {coins} coins. Now, use /confirm to add coins.')  
     await FSMadd_coins.AddCoins.set()
