@@ -1,3 +1,3 @@
 ### ITAM-shop
 
-backend - me (tg: cvbnqq)
+backend/devops - me (tg: cvbnqq)
